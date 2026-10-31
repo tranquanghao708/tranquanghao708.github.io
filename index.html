@@ -8,10 +8,11 @@
 <title>Trần Quang Hào | Low-Level &amp; Reverse Engineering</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%AC%A1%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="ll.css">
+<link rel="stylesheet" href="layout.css">
 </head>
 <body>
 <canvas id="rain" aria-hidden="true"></canvas>
-<div class="container">
+<div class="container wide">
   <div class="top-bar">
     <nav class="nav">
       <a href="index.html" class="logo"><span>~/</span>tranquanghao</a>
@@ -22,84 +23,90 @@
     </nav>
   </div>
 
-  <header class="hero">
-    <div>
-      <h1>Trần Quang Hào</h1>
-      <p class="subtitle">[ đang học · low-level systems &amp; reverse engineering ]</p>
-      <p class="tagline">Không gian ghi chép cá nhân khi mình tìm hiểu kiến trúc máy tính, lập trình cấp thấp và cách phần mềm thực sự chạy trên phần cứng.</p>
-    </div>
-    <div class="chip" aria-hidden="true">
-      <svg viewBox="0 0 240 240" fill="none" stroke-linecap="round">
-        <g stroke="#58a6ff" stroke-width="5" stroke-dasharray="6 8" opacity=".7">
-          <path d="M60 12H180M60 228H180M12 60V180M228 60V180"/>
-        </g>
-        <rect x="32" y="32" width="176" height="176" rx="10" fill="#0d131b" stroke="#58a6ff" stroke-width="2"/>
-        <rect x="62" y="62" width="116" height="116" rx="6" fill="#0a0e14" stroke="#3fb950" stroke-width="1.5"/>
-        <g stroke="#243040" stroke-width="1"><path d="M62 90H178M62 120H178M62 150H178M90 62V178M120 62V178M150 62V178"/></g>
-        <g stroke="#3fb950" stroke-width="1.5" stroke-dasharray="10 150">
-          <path d="M42 90H90V42"><animate attributeName="stroke-dashoffset" from="160" to="0" dur="3s" repeatCount="indefinite"/></path>
-          <path d="M198 150H150V198"><animate attributeName="stroke-dashoffset" from="160" to="0" dur="3.6s" repeatCount="indefinite"/></path>
-          <path d="M42 150H62M198 90H178M120 42V62M120 198V178"><animate attributeName="stroke-dashoffset" from="160" to="0" dur="2.4s" repeatCount="indefinite"/></path>
-        </g>
-        <text x="120" y="116" text-anchor="middle" fill="#58a6ff" font-family="monospace" font-size="15" font-weight="700">x86-64</text>
-        <text x="120" y="136" text-anchor="middle" fill="#5d6b7e" font-family="monospace" font-size="9">0x00401136</text>
-        <circle cx="46" cy="46" r="3" fill="#e3b341"/>
-      </svg>
-      <div class="regs">
-        <div><b>RIP</b> <i>0x401136</i></div>
-        <div><b>RSP</b> 0x7ffe3a10</div>
-        <div><b>RAX</b> 0x0 · <b>ZF</b>=1</div>
-      </div>
-    </div>
-  </header>
+  <div class="layout">
+    <aside class="side" id="side" aria-label="Mục lục"></aside>
 
-  <div class="term" id="term">
-    <div class="term-bar"><i></i><i></i><i></i><span>hao@lowlevel: ~</span></div>
-    <div class="term-body">
-      <div class="tl cmd"><span class="p">hao@lowlevel<em>:~$</em></span> <span class="t">whoami</span></div>
-      <div class="tl out"><b>tranquanghao</b> — người đang học low-level</div>
-      <div class="tl cmd"><span class="p">hao@lowlevel<em>:~$</em></span> <span class="t">uname -a</span></div>
-      <div class="tl out">Linux lowlevel 6.x x86_64 GNU/Linux <span class="c">// ghi chú &amp; thử nghiệm</span></div>
-      <div class="tl cmd"><span class="p">hao@lowlevel<em>:~$</em></span> <span class="t">objdump -d --no-show-raw-insn learning | head -4</span></div>
-      <div class="tl out"><span class="n">401126</span> <span class="k">push</span>  rbp
+    <main>
+      <header class="hero" id="intro">
+        <h1>Trần Quang Hào</h1>
+        <p class="subtitle">[ đang học · low-level systems &amp; reverse engineering ]</p>
+        <p class="tagline">Không gian ghi chép cá nhân khi mình tìm hiểu kiến trúc máy tính, lập trình cấp thấp và cách phần mềm thực sự chạy trên phần cứng.</p>
+      </header>
+
+      <div class="term" id="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>hao@lowlevel: ~</span></div>
+        <div class="term-body">
+          <div class="tl cmd"><span class="p">hao@lowlevel<em>:~$</em></span> <span class="t">whoami</span></div>
+          <div class="tl out"><b>tranquanghao</b> — người đang học low-level</div>
+          <div class="tl cmd"><span class="p">hao@lowlevel<em>:~$</em></span> <span class="t">uname -a</span></div>
+          <div class="tl out">Linux lowlevel 6.x x86_64 GNU/Linux <span class="c">// ghi chú &amp; thử nghiệm</span></div>
+          <div class="tl cmd"><span class="p">hao@lowlevel<em>:~$</em></span> <span class="t">objdump -d --no-show-raw-insn learning | head -4</span></div>
+          <div class="tl out"><span class="n">401126</span> <span class="k">push</span>  rbp
 <span class="n">401127</span> <span class="k">mov</span>   rbp, rsp
 <span class="n">40112a</span> <span class="k">call</span>  <span class="n">401030</span> &lt;main_idea&gt;
 <span class="n">40112f</span> <span class="k">pop</span>   rbp</div>
-      <div class="tl cmd"><span class="p">hao@lowlevel<em>:~$</em></span> <span class="t">cat motivation.txt</span></div>
-      <div class="tl out">Tự ghi nhớ, hệ thống hóa kiến thức, chia sẻ cho ai đi cùng đường.<span class="cur"></span></div>
-    </div>
+          <div class="tl cmd"><span class="p">hao@lowlevel<em>:~$</em></span> <span class="t">cat motivation.txt</span></div>
+          <div class="tl out">Tự ghi nhớ, hệ thống hóa kiến thức, chia sẻ cho ai đi cùng đường.<span class="cur"></span></div>
+        </div>
+      </div>
+
+      <div class="note"><b>[!]</b> Giao diện trang này do AI hỗ trợ dựng. Mình tập trung học low-level, không chuyên frontend.</div>
+
+      <section id="focus">
+        <h2 class="section-title">readelf --focus</h2>
+        <ul class="focus-list">
+          <li class="focus-item"><span class="addr">0x0001</span><strong>Reverse Engineering</strong><span class="d">Đọc binary, dùng debugger, hiểu control flow</span></li>
+          <li class="focus-item"><span class="addr">0x0002</span><strong>Low-Level Systems</strong><span class="d">Memory, system call, cách OS quản lý tiến trình</span></li>
+          <li class="focus-item"><span class="addr">0x0003</span><strong>C &amp; Assembly (x86-64)</strong><span class="d">Viết và đọc code gần với phần cứng hơn</span></li>
+          <li class="focus-item"><span class="addr">0x0004</span><strong>Binary &amp; bảo mật cơ bản</strong><span class="d">Hiểu lỗ hổng đơn giản, cách chương trình bị lỗi</span></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">man blog</h2>
+        <div class="prose">
+          <p>Blog này giống như <em>sổ tay kỹ thuật</em> của mình: ghi chú, thử nghiệm và writeup nhỏ để tự ôn lại, đồng thời chia sẻ cho ai đang đi cùng con đường.</p>
+        </div>
+      </section>
+
+      <div class="cta-card">
+        <p>Xem các ghi chú và writeup nhỏ mình đã viết.</p>
+        <a href="notes.html" class="btn">$ ls posts/</a>
+      </div>
+
+      <footer>
+        <p>© 2026 tranquanghao708 · GitHub Pages</p>
+        <a href="https://github.com/tranquanghao708" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </footer>
+    </main>
+
+    <aside class="rside" aria-hidden="true">
+      <div class="chip">
+        <svg viewBox="0 0 240 240" fill="none" stroke-linecap="round">
+          <g stroke="#58a6ff" stroke-width="5" stroke-dasharray="6 8" opacity=".7"><path d="M60 12H180M60 228H180M12 60V180M228 60V180"/></g>
+          <rect x="32" y="32" width="176" height="176" rx="10" fill="#0d131b" stroke="#58a6ff" stroke-width="2"/>
+          <rect x="62" y="62" width="116" height="116" rx="6" fill="#0a0e14" stroke="#3fb950" stroke-width="1.5"/>
+          <g stroke="#243040" stroke-width="1"><path d="M62 90H178M62 120H178M62 150H178M90 62V178M120 62V178M150 62V178"/></g>
+          <g stroke="#3fb950" stroke-width="1.5" stroke-dasharray="10 150">
+            <path d="M42 90H90V42"><animate attributeName="stroke-dashoffset" from="160" to="0" dur="3s" repeatCount="indefinite"/></path>
+            <path d="M198 150H150V198"><animate attributeName="stroke-dashoffset" from="160" to="0" dur="3.6s" repeatCount="indefinite"/></path>
+            <path d="M42 150H62M198 90H178M120 42V62M120 198V178"><animate attributeName="stroke-dashoffset" from="160" to="0" dur="2.4s" repeatCount="indefinite"/></path>
+          </g>
+          <text x="120" y="116" text-anchor="middle" fill="#58a6ff" font-family="monospace" font-size="15" font-weight="700">x86-64</text>
+          <text x="120" y="136" text-anchor="middle" fill="#5d6b7e" font-family="monospace" font-size="9">0x00401136</text>
+          <circle cx="46" cy="46" r="3" fill="#e3b341"/>
+        </svg>
+        <div class="regs">
+          <div><b>RIP</b> <i>0x401136</i></div>
+          <div><b>RSP</b> 0x7ffe3a10</div>
+          <div><b>RAX</b> 0x0 · <b>ZF</b>=1</div>
+        </div>
+      </div>
+    </aside>
   </div>
-
-  <div class="note"><b>[!]</b> Giao diện trang này do AI hỗ trợ dựng. Mình tập trung học low-level, không chuyên frontend.</div>
-
-  <section>
-    <h2 class="section-title">readelf --focus</h2>
-    <ul class="focus-list">
-      <li class="focus-item"><span class="addr">0x0001</span><strong>Reverse Engineering</strong><span class="d">Đọc binary, dùng debugger, hiểu control flow</span></li>
-      <li class="focus-item"><span class="addr">0x0002</span><strong>Low-Level Systems</strong><span class="d">Memory, system call, cách OS quản lý tiến trình</span></li>
-      <li class="focus-item"><span class="addr">0x0003</span><strong>C &amp; Assembly (x86-64)</strong><span class="d">Viết và đọc code gần với phần cứng hơn</span></li>
-      <li class="focus-item"><span class="addr">0x0004</span><strong>Binary &amp; bảo mật cơ bản</strong><span class="d">Hiểu lỗ hổng đơn giản, cách chương trình bị lỗi</span></li>
-    </ul>
-  </section>
-
-  <section>
-    <h2 class="section-title">man blog</h2>
-    <div class="prose">
-      <p>Blog này giống như <em>sổ tay kỹ thuật</em> của mình: ghi chú, thử nghiệm và writeup nhỏ để tự ôn lại, đồng thời chia sẻ cho ai đang đi cùng con đường.</p>
-    </div>
-  </section>
-
-  <div class="cta-card">
-    <p>Xem các ghi chú và writeup nhỏ mình đã viết.</p>
-    <a href="notes.html" class="btn">$ ls posts/</a>
-  </div>
-
-  <footer>
-    <p>© 2026 tranquanghao708 · GitHub Pages</p>
-    <a href="https://github.com/tranquanghao708" target="_blank" rel="noopener noreferrer">GitHub</a>
-  </footer>
 </div>
 <script src="ll.js"></script>
+<script src="sidebar.js"></script>
 <script>LL.type(document.getElementById('term'));</script>
 </body>
 </html>
