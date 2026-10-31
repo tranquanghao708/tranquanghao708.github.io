@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer-when-downgrade">
     <title>Đang tải… | Trần Quang Hào</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬡</text></svg>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.8.1/github-markdown-dark.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css">
     <style>
         :root {
             --bg: #0d1117;
@@ -16,6 +18,7 @@
             --text-muted: #8b949e;
             --text-dim: #6e7681;
             --accent: #58a6ff;
+            --code-bg: rgba(110, 118, 129, 0.4);
             --font-mono: "SFMono-Regular", "Cascadia Code", "Fira Code", Consolas, Menlo, monospace;
             --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
             --radius: 8px;
@@ -55,20 +58,86 @@
             color: var(--text-dim); font-family: var(--font-mono);
         }
         .status.error { color: #f85149; }
+
         .markdown-body {
             background: transparent !important;
             font-size: 16px;
             line-height: 1.7;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
         }
         .markdown-body h1 { border-bottom: 1px solid var(--border); padding-bottom: 0.4em; }
-        .markdown-body pre { background: #0a0e14 !important; border: 1px solid var(--border); }
+        .markdown-body pre {
+            background: #0a0e14 !important;
+            border: 1px solid var(--border);
+            max-width: 100%;
+            overflow-x: auto;
+        }
 
+        /* Inline code giống GitHub — kể cả trong heading / bold */
+        .markdown-body code {
+            font-family: var(--font-mono);
+            font-size: 85%;
+            background: var(--code-bg);
+            padding: 0.2em 0.4em;
+            border-radius: 6px;
+            color: #e6edf3;
+        }
+        .markdown-body h1 code,
+        .markdown-body h2 code,
+        .markdown-body h3 code,
+        .markdown-body h4 code,
+        .markdown-body h5 code,
+        .markdown-body h6 code {
+            font-size: 0.85em;
+            background: var(--code-bg);
+            padding: 0.15em 0.4em;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        .markdown-body strong code,
+        .markdown-body b code {
+            font-weight: 700;
+            background: var(--code-bg);
+        }
+        .markdown-body pre code {
+            background: transparent !important;
+            padding: 0 !important;
+            border-radius: 0;
+            font-size: 0.9em;
+            color: inherit;
+        }
+
+        /* Ảnh */
+        .markdown-body img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            display: block;
+            margin: 1rem 0;
+            background: #0a0e14;
+        }
+        .markdown-body p > img { margin: 0.75rem auto; }
+
+        /* KaTeX */
+        .markdown-body .katex { font-size: 1.05em; }
+        .markdown-body .katex-display {
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 0.5rem 0;
+            margin: 1rem 0;
+        }
+
+        /* Alerts */
         .markdown-alert {
             padding: 0.85rem 1rem;
             margin: 1.25rem 0;
             border-left: 0.25em solid;
             border-radius: 0 6px 6px 0;
             background: #161b22;
+            overflow: hidden;
+            max-width: 100%;
         }
         .markdown-alert > :first-child { margin-top: 0; }
         .markdown-alert > :last-child  { margin-bottom: 0; }
@@ -100,12 +169,43 @@
         .markdown-body table tr:nth-child(2n) { background: #161b22; }
         .markdown-body table th { font-weight: 600; background: #161b22; }
 
+        /* details — hết thanh trượt ngang cả khối */
         .markdown-body details {
-            background: #161b22; border: 1px solid #30363d;
-            border-radius: 6px; padding: 0.6rem 1rem; margin: 1rem 0;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 0.6rem 1rem;
+            margin: 1rem 0;
+            max-width: 100%;
+            overflow-x: hidden;
+            overflow-wrap: anywhere;
         }
-        .markdown-body details summary { cursor: pointer; font-weight: 600; color: #e6edf3; }
-        .markdown-body details[open] summary { margin-bottom: 0.6rem; }
+        .markdown-body details summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: #e6edf3;
+            list-style: none;
+        }
+        .markdown-body details summary::-webkit-details-marker { display: none; }
+        .markdown-body details summary::before {
+            content: "▶";
+            display: inline-block;
+            margin-right: 0.45rem;
+            font-size: 0.75em;
+            color: var(--accent);
+            transition: transform 0.15s;
+        }
+        .markdown-body details[open] summary::before {
+            transform: rotate(90deg);
+        }
+        .markdown-body details[open] summary { margin-bottom: 0.75rem; }
+        .markdown-body details pre,
+        .markdown-body details .highlight,
+        .markdown-body details table {
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        .markdown-body details img { max-width: 100%; }
 
         .markdown-body kbd {
             background: #161b22; border: 1px solid #30363d;
@@ -122,10 +222,10 @@
             margin-top: 0.3em; margin-bottom: 0.3em;
         }
 
-        /* Heading hover: hiện nút copy link section */
         .markdown-body h1, .markdown-body h2, .markdown-body h3,
         .markdown-body h4, .markdown-body h5, .markdown-body h6 {
             position: relative;
+            scroll-margin-top: 72px; /* sticky nav */
         }
         .heading-anchor {
             position: absolute;
@@ -150,7 +250,6 @@
             font-family: var(--font-mono); font-size: 0.82rem;
             color: var(--text-dim); margin-bottom: 1.5rem;
         }
-
         .views-bar {
             margin: 2.2rem 0 1rem;
             padding-top: 1.2rem;
@@ -160,8 +259,6 @@
             color: var(--text-dim);
             display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;
         }
-
-        /* Share / link tools for comments */
         .share-tools {
             margin: 1rem 0 1.5rem;
             padding: 1rem 1.15rem;
@@ -170,15 +267,10 @@
             border-radius: var(--radius);
         }
         .share-tools h3 {
-            font-size: 0.95rem;
-            color: #fff;
-            margin-bottom: 0.6rem;
-            font-weight: 600;
+            font-size: 0.95rem; color: #fff; margin-bottom: 0.6rem; font-weight: 600;
         }
         .share-tools p {
-            font-size: 0.88rem;
-            color: var(--text-muted);
-            margin-bottom: 0.75rem;
+            font-size: 0.88rem; color: var(--text-muted); margin-bottom: 0.75rem;
         }
         .share-row {
             display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
@@ -216,15 +308,11 @@
             border-top: 1px solid var(--border);
         }
         .comments-wrap h2 {
-            font-size: 1.15rem;
-            color: #fff;
-            margin-bottom: 0.5rem;
+            font-size: 1.15rem; color: #fff; margin-bottom: 0.5rem;
         }
         .comments-hint {
-            font-size: 0.88rem;
-            color: var(--text-dim);
-            margin-bottom: 1rem;
-            line-height: 1.55;
+            font-size: 0.88rem; color: var(--text-dim);
+            margin-bottom: 1rem; line-height: 1.55;
         }
         .comments-hint code {
             font-family: var(--font-mono);
@@ -235,7 +323,6 @@
             color: var(--accent);
         }
         .comments-hint strong { color: var(--text-muted); }
-
         .back-link {
             display: inline-block; margin-top: 2.5rem;
             font-family: var(--font-mono); font-size: 0.88rem;
@@ -273,31 +360,26 @@
         👁 <span id="view-count">0</span> lượt xem (trình duyệt này · chống F5 spam)
     </div>
 
-    <!-- Công cụ copy link để dán vào bình luận -->
     <div class="share-tools" id="share-tools" style="display:none">
         <h3>Link để trao đổi trong bình luận</h3>
-        <p>
-            Copy link bài hoặc link tới mục (heading) rồi dán vào ô bình luận Giscus.
-            Người khác bấm vào sẽ nhảy đúng chỗ.
-        </p>
+        <p>Copy link bài hoặc link mục rồi dán vào Giscus. Người khác bấm sẽ nhảy đúng chỗ.</p>
         <div class="share-row">
             <input type="text" id="post-link" readonly>
             <button type="button" class="btn-copy" id="btn-copy-post">Copy link bài</button>
         </div>
         <div class="share-row" style="margin-top:0.5rem">
-            <input type="text" id="section-link" readonly placeholder="Hover heading trong bài → bấm # để lấy link mục">
+            <input type="text" id="section-link" readonly placeholder="Hover heading → bấm # để lấy link mục">
             <button type="button" class="btn-copy" id="btn-copy-section">Copy link mục</button>
         </div>
     </div>
 
     <div class="comments-wrap" id="comments-wrap" style="display:none">
-        <h2>Bình luận & cảm xúc</h2>
+        <h2>Bình luận &amp; cảm xúc</h2>
         <p class="comments-hint">
-            Dùng <strong>GitHub Discussions</strong> (Giscus) — public, mọi máy đều thấy.<br>
-            • <strong>Sửa / xóa</strong>: đăng nhập GitHub → hover bình luận của bạn → Edit / Delete<br>
-            • <strong>Gắn thẻ</strong>: gõ <code>@username</code> trong bình luận<br>
-            • <strong>Reaction</strong>: dùng hàng cảm xúc của GitHub trên từng bình luận / discussion<br>
-            • <strong>Link mục</strong>: copy ở khung phía trên rồi dán vào bình luận để trỏ đúng đoạn bài
+            GitHub Discussions (Giscus) — public.<br>
+            • Sửa/xóa: đăng nhập GitHub → hover comment → Edit/Delete<br>
+            • Gắn thẻ: <code>@username</code> · Reaction trên discussion<br>
+            • Link mục: copy ở khung trên rồi dán vào bình luận
         </p>
         <div id="giscus-container"></div>
     </div>
@@ -310,59 +392,85 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.4/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js"></script>
 <script>
 (function () {
+    'use strict';
+
     const CONFIG = {
         owner: 'tranquanghao708',
         repo: 'tranquanghao708.github.io',
-        branch: 'main'
+        branch: 'main',
+        fetchTimeoutMs: 20000
     };
 
-    // Lấy từ https://giscus.app sau khi bật Discussions + cài Giscus app
     const GISCUS = {
         repo: 'tranquanghao708/tranquanghao708.github.io',
-        repoId: 'R_kgDOVeKpJQ',           // ← PASTE
+        repoId: 'R_kgDOVeKpJQ',
         category: 'Announcements',
-        categoryId: 'DIC_kwDOVeKpJc4DKFfr',     // ← PASTE
-        mapping: 'specific',            // dùng data-term tự set
-        strict: '0',
-        reactionsEnabled: '1',
-        emitMetadata: '0',
-        inputPosition: 'top',
-        theme: 'dark',
-        lang: 'vi',
-        loading: 'lazy'
+        categoryId: 'DIC_kwDOVeKpJc4DKFfr'
     };
 
-    function githubSlug(text) {
-        return text.toString().trim().toLowerCase()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            .replace(/đ/g, 'd')
-            .replace(/[^a-z0-9\s-]/g, '')
-            .replace(/\s+/g, '-').replace(/-+/g, '-')
-            .replace(/^-|-$/g, '');
-    }
+    const ALLOWED_MD_HOSTS = new Set([
+        'raw.githubusercontent.com',
+        'gist.githubusercontent.com'
+    ]);
+    const SAFE_FILE_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,120}\.md$/;
+    const ALERT_TYPES = new Set(['note', 'tip', 'important', 'warning', 'caution']);
 
     const ALERT_ICONS = {
-        note: `<svg viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>`,
-        tip: `<svg viewBox="0 0 16 16"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.10.10.0.2.192.168.1.4.36.67.576 1.022.24.393.425.747.425 1.171v1a.75.75 0 0 0 1.5 0v-1c0-.616-.262-1.14-.524-1.57a5.65 5.65 0 0 0-.597-1.048 8.861 8.861 0 0 0-.46-.558l-.214-.253C5.924 6.125 5.5 5.734 5.5 5.25 5.5 3.81 6.637 2.999 8 3c1.363 0 2.5.81 2.5 2.25 0 .484-.424.875-.984 1.496l-.214.253c-.145.172-.29.365-.46.558a5.65 5.65 0 0 0-.597 1.048c-.262.43-.524.954-.524 1.57v1a.75.75 0 0 0 1.5 0v-1c0-.424.185-.778.425-1.171a8.15 8.15 0 0 1 .576-1.022c.16-.246.32-.49.46-.732.145-.242.29-.485.46-.732l.214-.253C11.576 6.125 12 5.734 12 5.25c0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"/></svg>`,
-        important: `<svg viewBox="0 0 16 16"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .172.16.0.3.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/></svg>`,
-        warning: `<svg viewBox="0 0 16 16"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/></svg>`,
-        caution: `<svg viewBox="0 0 16 16"><path d="M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>`
+        note: `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>`,
+        tip: `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.10.10.0.2.192.168.1.4.36.67.576 1.022.24.393.425.747.425 1.171v1a.75.75 0 0 0 1.5 0v-1c0-.616-.262-1.14-.524-1.57a5.65 5.65 0 0 0-.597-1.048 8.861 8.861 0 0 0-.46-.558l-.214-.253C5.924 6.125 5.5 5.734 5.5 5.25 5.5 3.81 6.637 2.999 8 3c1.363 0 2.5.81 2.5 2.25 0 .484-.424.875-.984 1.496l-.214.253c-.145.172-.29.365-.46.558a5.65 5.65 0 0 0-.597 1.048c-.262.43-.524.954-.524 1.57v1a.75.75 0 0 0 1.5 0v-1c0-.424.185-.778.425-1.171a8.15 8.15 0 0 1 .576-1.022c.16-.246.32-.49.46-.732.145-.242.29-.485.46-.732l.214-.253C11.576 6.125 12 5.734 12 5.25c0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"/></svg>`,
+        important: `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .172.16.0.3.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/></svg>`,
+        warning: `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/></svg>`,
+        caution: `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>`
     };
     const ALERT_TITLES = {
         note: 'Note', tip: 'Tip', important: 'Important',
         warning: 'Warning', caution: 'Caution'
     };
 
+    /** Slug gần GitHub — hỗ trợ số, tiếng Việt, bỏ dấu */
+    function githubSlug(text) {
+        return String(text)
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/[^a-z0-9\s._-]/g, '')
+            .replace(/[\s._]+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+    }
+
+    function sanitizeHtml(dirty) {
+        if (typeof DOMPurify === 'undefined') {
+            return String(dirty)
+                .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+                .replace(/\son\w+\s*=\s*(['"]).*?\1/gi, '')
+                .replace(/javascript:/gi, '');
+        }
+        return DOMPurify.sanitize(dirty, {
+            USE_PROFILES: { html: true },
+            ADD_TAGS: ['details', 'summary', 'kbd', 'img'],
+            ADD_ATTR: ['open', 'aria-hidden', 'target', 'rel', 'class', 'id', 'src', 'alt', 'loading', 'width', 'height'],
+            FORBID_TAGS: ['style', 'iframe', 'object', 'embed', 'form'],
+            FORBID_ATTR: ['style']
+        });
+    }
+
     function preprocessAlerts(md) {
         return md.replace(
             /^> \[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*\n((?:^>.*\n?)*)/gmi,
             (match, type, body) => {
-                type = type.toLowerCase();
+                type = String(type).toLowerCase();
+                if (!ALERT_TYPES.has(type)) return match;
                 const cleaned = body.replace(/^>[ \t]?/gm, '').trimEnd();
-                const bodyHtml = marked.parse(cleaned, { async: false });
-                return `\n\n<div class="markdown-alert markdown-alert-${type}">
+                const bodyHtml = sanitizeHtml(marked.parse(cleaned, { async: false }));
+                return `\n\n<div class="markdown-alert markdown-alert-${type}" data-alert="${type}">
 <p class="markdown-alert-title">${ALERT_ICONS[type] || ''} ${ALERT_TITLES[type]}</p>
 ${bodyHtml}
 </div>\n\n`;
@@ -372,36 +480,112 @@ ${bodyHtml}
 
     const renderer = new marked.Renderer();
     renderer.heading = function ({ text, depth }) {
-        const plain = text.replace(/<[^>]+>/g, '');
+        const plain = String(text).replace(/<[^>]+>/g, '');
         const id = githubSlug(plain);
-        return `<h${depth} id="${id}">${text}</h${depth}>\n`;
+        const d = Math.min(6, Math.max(1, depth | 0));
+        return `<h${d} id="${id}">${text}</h${d}>\n`;
+    };
+    renderer.link = function ({ href, title, text }) {
+        const t = title ? ` title="${String(title).replace(/"/g, '&quot;')}"` : '';
+        let h = String(href || '');
+        if (/^\s*javascript:/i.test(h)) h = '#';
+        const abs = /^https?:\/\//i.test(h);
+        const rel = abs ? ' rel="noopener noreferrer nofollow"' : '';
+        const target = abs ? ' target="_blank"' : '';
+        return `<a href="${h.replace(/"/g, '&quot;')}"${t}${target}${rel}>${text}</a>`;
+    };
+    renderer.image = function ({ href, title, text }) {
+        let src = String(href || '');
+        if (!/^https?:\/\//i.test(src) && !src.startsWith('/') && !src.startsWith('./') && !src.startsWith('../')) {
+            src = src; // relative ok
+        }
+        if (/^\s*javascript:/i.test(src)) return '';
+        const alt = String(text || '').replace(/"/g, '&quot;');
+        const t = title ? ` title="${String(title).replace(/"/g, '&quot;')}"` : '';
+        return `<img src="${src.replace(/"/g, '&quot;')}" alt="${alt}" loading="lazy"${t}>`;
     };
 
     marked.setOptions({
         renderer,
         gfm: true,
         breaks: false,
-        highlight: function (code, lang) {
-            if (lang && hljs.getLanguage(lang)) {
-                try { return hljs.highlight(code, { language: lang }).value; } catch (e) {}
+        async: false,
+        highlight(code, lang) {
+            try {
+                if (lang && hljs.getLanguage(lang)) {
+                    return hljs.highlight(code, { language: lang }).value;
+                }
+                return hljs.highlightAuto(code).value;
+            } catch (e) {
+                return code;
             }
-            return hljs.highlightAuto(code).value;
         }
     });
 
     const params = new URLSearchParams(location.search);
-    const file = params.get('file');
-    const url  = params.get('url');
-    const POST_ID = file || url || 'unknown';
+    const fileRaw = params.get('file');
+    const urlRaw = params.get('url');
 
-    const statusEl  = document.getElementById('status');
+    let file = null;
+    let url = null;
+    if (fileRaw && SAFE_FILE_RE.test(fileRaw)) file = fileRaw;
+    if (urlRaw) {
+        try {
+            const u = new URL(urlRaw);
+            if (u.protocol === 'https:' && ALLOWED_MD_HOSTS.has(u.hostname)) url = u.toString();
+        } catch (e) {}
+    }
+
+    const POST_ID = file || url || 'unknown';
+    const statusEl = document.getElementById('status');
     const articleEl = document.getElementById('article');
     const contentEl = document.getElementById('content');
+
+    function showError(msg) {
+        statusEl.className = 'status error';
+        statusEl.textContent = 'Lỗi: ' + msg;
+    }
+
+    async function fetchText(resourceUrl, options) {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), CONFIG.fetchTimeoutMs);
+        try {
+            return await fetch(resourceUrl, {
+                ...options,
+                signal: ctrl.signal,
+                cache: 'no-store',
+                credentials: 'omit'
+            });
+        } finally {
+            clearTimeout(timer);
+        }
+    }
 
     function getPostUrl(hash) {
         const u = new URL(location.href);
         u.hash = hash || '';
+        if (!hash) u.hash = '';
         return u.toString();
+    }
+
+    function scrollToHash() {
+        let raw = location.hash.replace(/^#/, '');
+        if (!raw) return false;
+        try { raw = decodeURIComponent(raw); } catch (e) {}
+        const id = githubSlug(raw) === raw ? raw : raw;
+        let target = document.getElementById(raw) || document.getElementById(githubSlug(raw));
+        if (!target && /^[a-zA-Z0-9._-]+$/.test(raw)) {
+            target = document.getElementById(raw);
+        }
+        if (target) {
+            requestAnimationFrame(() => {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+            const sectionInput = document.getElementById('section-link');
+            if (sectionInput) sectionInput.value = getPostUrl('#' + target.id);
+            return true;
+        }
+        return false;
     }
 
     function enhanceHeadings() {
@@ -410,103 +594,139 @@ ${bodyHtml}
             if (!id || h.querySelector('.heading-anchor')) return;
             const a = document.createElement('a');
             a.className = 'heading-anchor';
-            a.href = `#${id}`;
+            a.href = '#' + id;
             a.textContent = '#';
             a.title = 'Copy link tới mục này';
             a.addEventListener('click', (e) => {
                 e.preventDefault();
-                const full = getPostUrl(`#${id}`);
-                history.replaceState(null, '', `#${id}`);
-                const sectionInput = document.getElementById('section-link');
-                sectionInput.value = full;
-                navigator.clipboard.writeText(full).then(() => {
-                    const btn = document.getElementById('btn-copy-section');
-                    btn.textContent = 'Đã copy!';
-                    btn.classList.add('copied');
-                    setTimeout(() => {
-                        btn.textContent = 'Copy link mục';
-                        btn.classList.remove('copied');
-                    }, 1500);
-                });
-                document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+                const full = getPostUrl('#' + id);
+                history.replaceState(null, '', '#' + id);
+                document.getElementById('section-link').value = full;
+                copyText(full).then(() => flashBtn(document.getElementById('btn-copy-section'), 'Copy link mục'));
+                h.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
             h.prepend(a);
         });
     }
 
+    function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(text);
+        }
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;left:-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        return Promise.resolve();
+    }
+
+    function flashBtn(btn, label) {
+        if (!btn) return;
+        btn.textContent = 'Đã copy!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.textContent = label;
+            btn.classList.remove('copied');
+        }, 1500);
+    }
+
     function setupShareTools() {
         const postLink = getPostUrl('');
         document.getElementById('post-link').value = postLink;
-
         document.getElementById('btn-copy-post').addEventListener('click', function () {
-            navigator.clipboard.writeText(postLink).then(() => {
-                this.textContent = 'Đã copy!';
-                this.classList.add('copied');
-                setTimeout(() => {
-                    this.textContent = 'Copy link bài';
-                    this.classList.remove('copied');
-                }, 1500);
-            });
+            copyText(postLink).then(() => flashBtn(this, 'Copy link bài'));
         });
-
         document.getElementById('btn-copy-section').addEventListener('click', function () {
             const v = document.getElementById('section-link').value;
             if (!v) {
-                alert('Hãy hover vào một heading trong bài và bấm dấu # bên trái để lấy link mục trước.');
+                alert('Hover heading trong bài và bấm # để lấy link mục trước.');
                 return;
             }
-            navigator.clipboard.writeText(v).then(() => {
-                this.textContent = 'Đã copy!';
-                this.classList.add('copied');
-                setTimeout(() => {
-                    this.textContent = 'Copy link mục';
-                    this.classList.remove('copied');
-                }, 1500);
-            });
+            copyText(v).then(() => flashBtn(this, 'Copy link mục'));
         });
     }
 
+    function renderMath() {
+        if (typeof renderMathInElement !== 'function') return;
+        try {
+            renderMathInElement(contentEl, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '\\[', right: '\\]', display: true },
+                    { left: '$', right: '$', display: false },
+                    { left: '\\(', right: '\\)', display: false }
+                ],
+                throwOnError: false,
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+            });
+        } catch (e) {
+            console.warn('KaTeX', e);
+        }
+    }
+
     async function loadMarkdown() {
+        if (!file && !url) {
+            showError('Thiếu hoặc không hợp lệ: ?file=ten.md hoặc ?url= (raw.githubusercontent.com)');
+            return;
+        }
+
         let mdText = '';
         let sourceLabel = '';
+
         try {
             if (url) {
-                const res = await fetch(url, { cache: 'no-store' });
+                const res = await fetchText(url, { headers: { Accept: 'text/plain' } });
                 if (!res.ok) throw new Error('Không tải được file từ URL');
                 mdText = await res.text();
-                sourceLabel = 'Nguồn ngoài';
-            } else if (file) {
+                sourceLabel = 'Nguồn ngoài (GitHub raw)';
+            } else {
                 const apiUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/posts/${encodeURIComponent(file)}?ref=${CONFIG.branch}`;
-                let downloadUrl = `posts/${file}`;
-                let version = Date.now();
+                let downloadUrl = `posts/${encodeURIComponent(file)}`;
+                let version = String(Date.now());
                 try {
-                    const apiRes = await fetch(apiUrl, {
-                        cache: 'no-store',
-                        headers: { 'Accept': 'application/vnd.github.v3+json' }
+                    const apiRes = await fetchText(apiUrl, {
+                        headers: { Accept: 'application/vnd.github.v3+json' }
                     });
                     if (apiRes.ok) {
                         const info = await apiRes.json();
-                        if (info.download_url) downloadUrl = info.download_url;
-                        if (info.sha) version = info.sha.slice(0, 8);
+                        if (info && typeof info.download_url === 'string') {
+                            const du = new URL(info.download_url);
+                            if (du.hostname === 'raw.githubusercontent.com') downloadUrl = info.download_url;
+                        }
+                        if (info && typeof info.sha === 'string') version = info.sha.slice(0, 8);
                     }
-                } catch (e) { console.warn('API fallback', e); }
-
-                const res = await fetch(`${downloadUrl}${downloadUrl.includes('?') ? '&' : '?'}v=${version}`, {
-                    cache: 'no-store'
+                } catch (e) {
+                    console.warn('API fallback', e);
+                }
+                const sep = downloadUrl.includes('?') ? '&' : '?';
+                const res = await fetchText(`${downloadUrl}${sep}v=${encodeURIComponent(version)}`, {
+                    headers: { Accept: 'text/plain' }
                 });
-                if (!res.ok) throw new Error(`Không tìm thấy posts/${file}`);
+                if (!res.ok) throw new Error('Không tìm thấy posts/' + file);
                 mdText = await res.text();
-                sourceLabel = `${file} · v=${version}`;
-            } else {
-                throw new Error('Thiếu tham số ?file=... hoặc ?url=...');
+                sourceLabel = file + ' · v=' + version;
             }
 
-            let processed = preprocessAlerts(mdText);
-            contentEl.innerHTML = marked.parse(processed);
-            contentEl.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
-            enhanceHeadings();
+            const processed = preprocessAlerts(mdText);
+            contentEl.innerHTML = sanitizeHtml(marked.parse(processed));
 
-            document.getElementById('post-meta').textContent = `Nguồn: ${sourceLabel} · đang học`;
+            contentEl.querySelectorAll('pre code').forEach(block => {
+                try { hljs.highlightElement(block); } catch (e) {}
+            });
+
+            contentEl.querySelectorAll('a[href^="http"]').forEach(a => {
+                a.setAttribute('rel', 'noopener noreferrer nofollow');
+                a.setAttribute('target', '_blank');
+            });
+
+            enhanceHeadings();
+            renderMath();
+
+            document.getElementById('post-meta').textContent = 'Nguồn: ' + sourceLabel + ' · đang học';
             statusEl.style.display = 'none';
             articleEl.style.display = 'block';
             document.getElementById('views-bar').style.display = 'flex';
@@ -516,33 +736,30 @@ ${bodyHtml}
             document.getElementById('footer').style.display = 'block';
 
             const h1 = contentEl.querySelector('h1');
-            document.title = (h1 ? h1.textContent : 'Bài viết') + ' | Trần Quang Hào';
+            const titleText = h1 ? h1.textContent.replace(/\s+/g, ' ').trim() : 'Bài viết';
+            document.title = titleText.slice(0, 80) + ' | Trần Quang Hào';
 
             setupShareTools();
 
-            // Redirect / scroll tới hash (từ link trong bình luận)
-            if (location.hash) {
-                const id = location.hash.slice(1);
-                const target = document.getElementById(id) || document.querySelector(location.hash);
-                if (target) {
-                    setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
-                    document.getElementById('section-link').value = getPostUrl(location.hash);
-                }
-            }
+            // Redirect sau khi render + ảnh/math
+            setTimeout(scrollToHash, 50);
+            setTimeout(scrollToHash, 300);
 
             initViews();
             loadGiscus();
         } catch (err) {
-            statusEl.className = 'status error';
-            statusEl.textContent = 'Lỗi: ' + err.message;
+            const msg = err && err.name === 'AbortError'
+                ? 'Hết thời gian tải (timeout)'
+                : (err && err.message) || 'Không tải được bài viết';
+            showError(msg);
             console.error(err);
         }
     }
 
     function initViews() {
-        const viewKey = `views_${POST_ID}`;
-        const lastViewKey = `lastview_${POST_ID}`;
-        const fingerprintKey = `fp_${POST_ID}`;
+        const viewKey = 'views_' + POST_ID;
+        const lastViewKey = 'lastview_' + POST_ID;
+        const fingerprintKey = 'fp_' + POST_ID;
         const COOLDOWN_MS = 12 * 60 * 60 * 1000;
 
         function getFingerprint() {
@@ -562,79 +779,57 @@ ${bodyHtml}
         const fp = getFingerprint();
         const now = Date.now();
         let views = parseInt(localStorage.getItem(viewKey) || '0', 10);
-        const lastView = parseInt(localStorage.getItem(lastViewKey) || '0', 10);
+        if (!Number.isFinite(views) || views < 0) views = 0;
+        const lastView = parseInt(localStorage.getItem(lastViewKey) || '0', 10) || 0;
         const lastFp = localStorage.getItem(fingerprintKey);
 
-        if ((lastFp !== fp) || (now - lastView > COOLDOWN_MS)) {
+        if (lastFp !== fp || now - lastView > COOLDOWN_MS) {
             views += 1;
-            localStorage.setItem(viewKey, views);
-            localStorage.setItem(lastViewKey, now);
-            localStorage.setItem(fingerprintKey, fp);
+            try {
+                localStorage.setItem(viewKey, String(views));
+                localStorage.setItem(lastViewKey, String(now));
+                localStorage.setItem(fingerprintKey, fp);
+            } catch (e) {}
         }
-        document.getElementById('view-count').textContent = views;
+        document.getElementById('view-count').textContent = String(views);
     }
 
-function loadGiscus() {
-    const container = document.getElementById('giscus-container');
-    container.innerHTML = '';
-
-    /*
-     * ============================================================
-     * TERM ỔN ĐỊNH — KHÔNG ĐƯỢC ĐỔI FORMAT NÀY
-     * Giscus map bình luận theo đúng chuỗi term.
-     * Đổi format → tạo discussion mới, nhìn như mất comment.
-     * Discussion cũ vẫn còn trên GitHub → tab Discussions.
-     * ============================================================
-     * Format cố định: tên file markdown, ví dụ "stack-frame.md"
+    /**
+     * Giscus term TỰ ĐỘNG theo ?file= (không hardcode từng bài).
+     * Format cố định: đúng tên file trong URL → thêm bài mới không cần sửa JS.
+     * Đổi format này mới làm “mất” discussion cũ.
      */
-    let term;
-    if (file) {
-        term = file; // ví dụ: stack-frame.md  ← GIỮ NGUYÊN MÃI
-    } else if (url) {
-        term = 'external:' + url;
-    } else {
-        term = 'general';
+    function loadGiscus() {
+        const container = document.getElementById('giscus-container');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const term = file
+            ? file
+            : (url ? 'external:' + url.slice(0, 180) : 'general');
+
+        const script = document.createElement('script');
+        script.src = 'https://giscus.app/client.js';
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+        script.setAttribute('data-repo', GISCUS.repo);
+        script.setAttribute('data-repo-id', GISCUS.repoId);
+        script.setAttribute('data-category', GISCUS.category);
+        script.setAttribute('data-category-id', GISCUS.categoryId);
+        script.setAttribute('data-mapping', 'specific');
+        script.setAttribute('data-term', term);
+        script.setAttribute('data-strict', '0');
+        script.setAttribute('data-reactions-enabled', '1');
+        script.setAttribute('data-emit-metadata', '0');
+        script.setAttribute('data-input-position', 'top');
+        script.setAttribute('data-theme', 'dark');
+        script.setAttribute('data-lang', 'vi');
+        script.setAttribute('data-loading', 'lazy');
+        container.appendChild(script);
+        console.info('[giscus] term =', term);
     }
 
-    const script = document.createElement('script');
-    script.src = 'https://giscus.app/client.js';
-    script.async = true;
-    script.crossOrigin = 'anonymous';
-
-    script.setAttribute('data-repo', GISCUS.repo);
-    script.setAttribute('data-repo-id', GISCUS.repoId);
-    script.setAttribute('data-category', GISCUS.category);
-    script.setAttribute('data-category-id', GISCUS.categoryId);
-
-    // mapping = specific + term cố định
-    script.setAttribute('data-mapping', 'specific');
-    script.setAttribute('data-term', term);
-    script.setAttribute('data-strict', '0');
-
-    script.setAttribute('data-reactions-enabled', '1');
-    script.setAttribute('data-emit-metadata', '0');
-    script.setAttribute('data-input-position', 'top');
-    script.setAttribute('data-theme', 'dark');
-    script.setAttribute('data-lang', 'vi');
-    script.setAttribute('data-loading', 'lazy');
-
-    container.appendChild(script);
-
-    // Debug: mở Console sẽ thấy term đang dùng
-    console.info('[giscus] term =', term);
-}
-
-    // Khi người dùng bấm link # trong trang (hoặc từ bình luận sau khi load)
-    window.addEventListener('hashchange', () => {
-        const id = location.hash.slice(1);
-        if (!id) return;
-        const target = document.getElementById(id);
-        if (target) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            const sectionInput = document.getElementById('section-link');
-            if (sectionInput) sectionInput.value = getPostUrl(location.hash);
-        }
-    });
+    window.addEventListener('hashchange', () => scrollToHash());
 
     loadMarkdown();
 })();
