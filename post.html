@@ -5,12 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đang tải… | Trần Quang Hào</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬡</text></svg>">
-
-    <!-- GitHub Markdown CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.8.1/github-markdown-dark.min.css">
-    <!-- Highlight.js (tô màu code) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
-
     <style>
         :root {
             --bg: #0d1117;
@@ -20,12 +16,10 @@
             --text-muted: #8b949e;
             --text-dim: #6e7681;
             --accent: #58a6ff;
-            --green: #3fb950;
             --font-mono: "SFMono-Regular", "Cascadia Code", "Fira Code", Consolas, Menlo, monospace;
             --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
             --radius: 8px;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: var(--font-sans);
@@ -35,8 +29,6 @@
             min-height: 100vh;
         }
         .container { max-width: 860px; margin: 0 auto; padding: 0 1.25rem 4rem; }
-
-        /* Nav */
         .top-bar {
             position: sticky; top: 0; z-index: 100;
             background: rgba(13,17,23,0.9);
@@ -57,15 +49,11 @@
         .nav-links { display: flex; gap: 1.3rem; list-style: none; }
         .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.88rem; }
         .nav-links a:hover { color: var(--accent); }
-
-        /* Loading / Error */
         .status {
             text-align: center; padding: 4rem 1rem;
             color: var(--text-dim); font-family: var(--font-mono);
         }
         .status.error { color: #f85149; }
-
-        /* Markdown body */
         .markdown-body {
             background: transparent !important;
             font-size: 16px;
@@ -74,116 +62,73 @@
         .markdown-body h1 { border-bottom: 1px solid var(--border); padding-bottom: 0.4em; }
         .markdown-body pre { background: #0a0e14 !important; border: 1px solid var(--border); }
 
-        /* ===== GitHub-style Alerts (NOTE, TIP, WARNING...) ===== */
-        /* ===== GitHub-style Alerts ===== */
-.markdown-alert {
-    padding: 0.85rem 1rem;
-    margin: 1.25rem 0;
-    border-left: 0.25em solid;
-    border-radius: 0 6px 6px 0;
-    background: #161b22;
-}
-.markdown-alert > :first-child { margin-top: 0; }
-.markdown-alert > :last-child  { margin-bottom: 0; }
+        /* Alerts */
+        .markdown-alert {
+            padding: 0.85rem 1rem;
+            margin: 1.25rem 0;
+            border-left: 0.25em solid;
+            border-radius: 0 6px 6px 0;
+            background: #161b22;
+        }
+        .markdown-alert > :first-child { margin-top: 0; }
+        .markdown-alert > :last-child  { margin-bottom: 0; }
+        .markdown-alert-title {
+            display: flex; align-items: center; gap: 0.4rem;
+            font-weight: 600; font-size: 0.95rem;
+            margin-bottom: 0.4rem; line-height: 1;
+        }
+        .markdown-alert-title svg { width: 16px; height: 16px; fill: currentColor; flex-shrink: 0; }
+        .markdown-alert-note      { border-color: #1f6feb; }
+        .markdown-alert-note .markdown-alert-title { color: #58a6ff; }
+        .markdown-alert-tip       { border-color: #238636; }
+        .markdown-alert-tip .markdown-alert-title { color: #3fb950; }
+        .markdown-alert-important { border-color: #8957e5; }
+        .markdown-alert-important .markdown-alert-title { color: #a371f7; }
+        .markdown-alert-warning   { border-color: #9e6a03; }
+        .markdown-alert-warning .markdown-alert-title { color: #d29922; }
+        .markdown-alert-caution   { border-color: #da3633; }
+        .markdown-alert-caution .markdown-alert-title { color: #f85149; }
 
-.markdown-alert-title {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-weight: 600;
-    font-size: 0.95rem;
-    margin-bottom: 0.4rem;
-    line-height: 1;
-}
-.markdown-alert-title svg {
-    width: 16px; height: 16px; fill: currentColor; flex-shrink: 0;
-}
+        /* Table */
+        .markdown-body table {
+            border-spacing: 0; border-collapse: collapse;
+            display: block; width: max-content; max-width: 100%;
+            overflow: auto; margin: 1.2rem 0;
+        }
+        .markdown-body table th,
+        .markdown-body table td { padding: 6px 13px; border: 1px solid #30363d; }
+        .markdown-body table tr { background: #0d1117; border-top: 1px solid #21262d; }
+        .markdown-body table tr:nth-child(2n) { background: #161b22; }
+        .markdown-body table th { font-weight: 600; background: #161b22; }
 
-.markdown-alert-note      { border-color: #1f6feb; }
-.markdown-alert-note .markdown-alert-title { color: #58a6ff; }
+        /* details */
+        .markdown-body details {
+            background: #161b22; border: 1px solid #30363d;
+            border-radius: 6px; padding: 0.6rem 1rem; margin: 1rem 0;
+        }
+        .markdown-body details summary { cursor: pointer; font-weight: 600; color: #e6edf3; }
+        .markdown-body details[open] summary { margin-bottom: 0.6rem; }
 
-.markdown-alert-tip       { border-color: #238636; }
-.markdown-alert-tip .markdown-alert-title { color: #3fb950; }
+        /* kbd */
+        .markdown-body kbd {
+            background: #161b22; border: 1px solid #30363d;
+            border-bottom-color: #21262d; border-radius: 6px;
+            box-shadow: inset 0 -1px 0 #21262d; color: #e6edf3;
+            font-family: var(--font-mono); font-size: 0.85em;
+            padding: 0.15em 0.4em;
+        }
+        .markdown-body hr {
+            height: 0.15em; background: #21262d; border: 0; margin: 2rem 0;
+        }
+        .markdown-body ul ul, .markdown-body ol ol,
+        .markdown-body ul ol, .markdown-body ol ul {
+            margin-top: 0.3em; margin-bottom: 0.3em;
+        }
 
-.markdown-alert-important { border-color: #8957e5; }
-.markdown-alert-important .markdown-alert-title { color: #a371f7; }
-
-.markdown-alert-warning   { border-color: #9e6a03; }
-.markdown-alert-warning .markdown-alert-title { color: #d29922; }
-
-.markdown-alert-caution   { border-color: #da3633; }
-.markdown-alert-caution .markdown-alert-title { color: #f85149; }
-
-/* Bảng */
-.markdown-body table {
-    border-spacing: 0;
-    border-collapse: collapse;
-    display: block;
-    width: max-content;
-    max-width: 100%;
-    overflow: auto;
-    margin: 1.2rem 0;
-}
-.markdown-body table th,
-.markdown-body table td {
-    padding: 6px 13px;
-    border: 1px solid #30363d;
-}
-.markdown-body table tr { background: #0d1117; border-top: 1px solid #21262d; }
-.markdown-body table tr:nth-child(2n) { background: #161b22; }
-.markdown-body table th { font-weight: 600; background: #161b22; }
-
-/* details / summary */
-.markdown-body details {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 6px;
-    padding: 0.6rem 1rem;
-    margin: 1rem 0;
-}
-.markdown-body details summary {
-    cursor: pointer;
-    font-weight: 600;
-    color: #e6edf3;
-}
-.markdown-body details[open] summary { margin-bottom: 0.6rem; }
-
-/* kbd */
-.markdown-body kbd {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-bottom-color: #21262d;
-    border-radius: 6px;
-    box-shadow: inset 0 -1px 0 #21262d;
-    color: #e6edf3;
-    font-family: var(--font-mono);
-    font-size: 0.85em;
-    padding: 0.15em 0.4em;
-}
-
-/* hr */
-.markdown-body hr {
-    height: 0.15em;
-    background: #21262d;
-    border: 0;
-    margin: 2rem 0;
-}
-
-/* Nested list indentation rõ hơn */
-.markdown-body ul ul,
-.markdown-body ol ol,
-.markdown-body ul ol,
-.markdown-body ol ul {
-    margin-top: 0.3em;
-    margin-bottom: 0.3em;
-}
-
-        /* Meta + Engagement (giữ lại từ bản trước) */
         .post-meta {
             font-family: var(--font-mono); font-size: 0.82rem;
             color: var(--text-dim); margin-bottom: 1.5rem;
         }
-
         .engagement {
             margin: 2.8rem 0 1.5rem;
             padding: 1.2rem 0;
@@ -206,8 +151,6 @@
         .reaction-btn.active {
             border-color: var(--accent); background: #388bfd22; color: var(--accent);
         }
-
-        /* Comments */
         .comments-section { margin-top: 2.5rem; }
         .comments-section h2 {
             font-size: 1.15rem; color: #fff; margin-bottom: 1.2rem;
@@ -256,14 +199,12 @@
             text-align: center; padding: 2rem; color: var(--text-dim);
             border: 1px dashed var(--border); border-radius: var(--radius);
         }
-
         .back-link {
             display: inline-block; margin-top: 2.5rem;
             font-family: var(--font-mono); font-size: 0.88rem;
             color: var(--accent); text-decoration: none;
         }
         .back-link:hover { text-decoration: underline; }
-
         footer {
             margin-top: 3rem; padding-top: 1.5rem;
             border-top: 1px solid var(--border);
@@ -282,17 +223,13 @@
             </ul>
         </nav>
     </div>
-
     <div id="status" class="status">Đang tải bài viết…</div>
-
     <article id="article" style="display:none">
         <div class="post-meta" id="post-meta"></div>
         <div id="content" class="markdown-body"></div>
     </article>
-
-    <!-- Reactions + Views -->
     <div class="engagement" id="engagement" style="display:none">
-        <div class="views" id="view-count">👁 <span>0</span> lượt xem (trên trình duyệt này)</div>
+        <div class="views" id="view-count">👁 <span>0</span> lượt xem</div>
         <div class="reactions" id="reactions">
             <button class="reaction-btn" data-type="like">👍 <span class="count">0</span></button>
             <button class="reaction-btn" data-type="clap">👏 <span class="count">0</span></button>
@@ -301,8 +238,6 @@
             <button class="reaction-btn" data-type="angry">😡 <span class="count">0</span></button>
         </div>
     </div>
-
-    <!-- Comments -->
     <section class="comments-section" id="comments-section" style="display:none">
         <h2>Bình luận <span id="comment-count">(0)</span></h2>
         <div class="comment-form">
@@ -316,7 +251,6 @@
             <div class="no-comments" id="no-comments">Chưa có bình luận nào.</div>
         </div>
     </section>
-
     <a href="notes.html" class="back-link" id="back-link" style="display:none">← Quay lại danh sách ghi chú</a>
     <footer id="footer" style="display:none">
         <p>© 2026 tranquanghao708 · Ghi chú đang học</p>
@@ -325,25 +259,25 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
-
 <script>
 (function () {
-    // ========== GitHub-like heading slug (hỗ trợ tiếng Việt) ==========
+    // ========== CẤU HÌNH ==========
+    const CONFIG = {
+        owner: 'tranquanghao708',
+        repo: 'tranquanghao708.github.io',   // ← đổi nếu repo khác
+        branch: 'main'
+    };
+
+    // ========== Slug giống GitHub (hỗ trợ tiếng Việt) ==========
     function githubSlug(text) {
-        return text
-            .toString()
-            .trim()
-            .toLowerCase()
-            .normalize('NFD')                   // tách dấu
-            .replace(/[\u0300-\u036f]/g, '')    // bỏ dấu
+        return text.toString().trim().toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .replace(/đ/g, 'd')
-            .replace(/[^a-z0-9\s-]/g, '')      // chỉ giữ chữ số, khoảng trắng, -
-            .replace(/\s+/g, '-')               // space → -
-            .replace(/-+/g, '-')                // gộp nhiều -
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-').replace(/-+/g, '-')
             .replace(/^-|-$/g, '');
     }
 
-    // ========== Icons cho alerts (SVG giống GitHub) ==========
     const ALERT_ICONS = {
         note: `<svg viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>`,
         tip: `<svg viewBox="0 0 16 16"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.10.10.0.2.192.168.1.4.36.67.576 1.022.24.393.425.747.425 1.171v1a.75.75 0 0 0 1.5 0v-1c0-.616-.262-1.14-.524-1.57a5.65 5.65 0 0 0-.597-1.048 8.861 8.861 0 0 0-.46-.558l-.214-.253C5.924 6.125 5.5 5.734 5.5 5.25 5.5 3.81 6.637 2.999 8 3c1.363 0 2.5.81 2.5 2.25 0 .484-.424.875-.984 1.496l-.214.253c-.145.172-.29.365-.46.558a5.65 5.65 0 0 0-.597 1.048c-.262.43-.524.954-.524 1.57v1a.75.75 0 0 0 1.5 0v-1c0-.424.185-.778.425-1.171a8.15 8.15 0 0 1 .576-1.022c.16-.246.32-.49.46-.732.145-.242.29-.485.46-.732l.214-.253C11.576 6.125 12 5.734 12 5.25c0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"/></svg>`,
@@ -351,27 +285,19 @@
         warning: `<svg viewBox="0 0 16 16"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/></svg>`,
         caution: `<svg viewBox="0 0 16 16"><path d="M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>`
     };
-
     const ALERT_TITLES = {
-        note: 'Note',
-        tip: 'Tip',
-        important: 'Important',
-        warning: 'Warning',
-        caution: 'Caution'
+        note: 'Note', tip: 'Tip', important: 'Important',
+        warning: 'Warning', caution: 'Caution'
     };
 
-    // ========== Pre-process alerts (xử lý tốt nội dung nhiều dòng) ==========
     function preprocessAlerts(md) {
-        // Khớp > [!TYPE] rồi các dòng tiếp theo bắt đầu bằng >
         return md.replace(
             /^> \[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*\n((?:^>.*\n?)*)/gmi,
             (match, type, body) => {
                 type = type.toLowerCase();
-                // Bỏ dấu > ở đầu mỗi dòng
                 const cleaned = body.replace(/^>[ \t]?/gm, '').trimEnd();
-                // Render phần thân bằng marked (để hỗ trợ list, code, link bên trong alert)
                 const bodyHtml = marked.parse(cleaned, { async: false });
-                return `\n\n<div class="markdown-alert markdown-alert-${type}" data-alert="${type}">
+                return `\n\n<div class="markdown-alert markdown-alert-${type}">
 <p class="markdown-alert-title">${ALERT_ICONS[type] || ''} ${ALERT_TITLES[type]}</p>
 ${bodyHtml}
 </div>\n\n`;
@@ -379,12 +305,9 @@ ${bodyHtml}
         );
     }
 
-    // ========== Cấu hình marked ==========
     const renderer = new marked.Renderer();
-
-    // Heading có id giống GitHub → anchor link hoạt động
     renderer.heading = function ({ text, depth }) {
-        const plain = text.replace(/<[^>]+>/g, ''); // bỏ thẻ html nếu có
+        const plain = text.replace(/<[^>]+>/g, '');
         const id = githubSlug(plain);
         return `<h${depth} id="${id}">${text}</h${depth}>\n`;
     };
@@ -392,19 +315,15 @@ ${bodyHtml}
     marked.setOptions({
         renderer,
         gfm: true,
-        breaks: false,          // giống GitHub hơn (cần 2 space hoặc empty line)
-        pedantic: false,
+        breaks: false,
         highlight: function (code, lang) {
             if (lang && hljs.getLanguage(lang)) {
-                try {
-                    return hljs.highlight(code, { language: lang }).value;
-                } catch (e) {}
+                try { return hljs.highlight(code, { language: lang }).value; } catch (e) {}
             }
             return hljs.highlightAuto(code).value;
         }
     });
 
-    // ========== Load bài viết ==========
     const params = new URLSearchParams(location.search);
     const file = params.get('file');
     const url  = params.get('url');
@@ -417,36 +336,47 @@ ${bodyHtml}
     async function loadMarkdown() {
         let mdText = '';
         let sourceLabel = '';
-
         try {
             if (url) {
-                const res = await fetch(url);
+                const res = await fetch(url, { cache: 'no-store' });
                 if (!res.ok) throw new Error('Không tải được file từ URL');
                 mdText = await res.text();
                 sourceLabel = 'Nguồn ngoài';
             } else if (file) {
-                const res = await fetch(`posts/${file}`);
+                // Lấy info mới nhất từ GitHub API để chống cache
+                const apiUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/posts/${encodeURIComponent(file)}?ref=${CONFIG.branch}`;
+                let downloadUrl = `posts/${file}`;
+                let version = Date.now();
+
+                try {
+                    const apiRes = await fetch(apiUrl, {
+                        cache: 'no-store',
+                        headers: { 'Accept': 'application/vnd.github.v3+json' }
+                    });
+                    if (apiRes.ok) {
+                        const info = await apiRes.json();
+                        if (info.download_url) downloadUrl = info.download_url;
+                        if (info.sha) version = info.sha.slice(0, 8);
+                    }
+                } catch (e) {
+                    console.warn('API fallback', e);
+                }
+
+                const res = await fetch(`${downloadUrl}${downloadUrl.includes('?') ? '&' : '?'}v=${version}`, {
+                    cache: 'no-store'
+                });
                 if (!res.ok) throw new Error(`Không tìm thấy posts/${file}`);
                 mdText = await res.text();
-                sourceLabel = file;
+                sourceLabel = `${file} · v=${version}`;
             } else {
                 throw new Error('Thiếu tham số ?file=... hoặc ?url=...');
             }
 
-            // 1. Xử lý alerts trước
             let processed = preprocessAlerts(mdText);
-
-            // 2. Parse Markdown
             let html = marked.parse(processed);
-
             contentEl.innerHTML = html;
+            contentEl.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
 
-            // 3. Highlight code
-            contentEl.querySelectorAll('pre code').forEach(block => {
-                hljs.highlightElement(block);
-            });
-
-            // 4. Meta + hiện UI
             document.getElementById('post-meta').textContent = `Nguồn: ${sourceLabel} · đang học`;
             statusEl.style.display = 'none';
             articleEl.style.display = 'block';
@@ -455,19 +385,16 @@ ${bodyHtml}
             document.getElementById('back-link').style.display = 'inline-block';
             document.getElementById('footer').style.display = 'block';
 
-            // Title
             const h1 = contentEl.querySelector('h1');
             document.title = (h1 ? h1.textContent : 'Bài viết') + ' | Trần Quang Hào';
 
-            // Scroll tới anchor nếu có hash
             if (location.hash) {
                 const target = document.querySelector(location.hash);
-                if (target) setTimeout(() => target.scrollIntoView({ behavior: 'smooth' }), 100);
+                if (target) setTimeout(() => target.scrollIntoView({ behavior: 'smooth' }), 120);
             }
 
             initEngagement();
             initComments();
-
         } catch (err) {
             statusEl.className = 'status error';
             statusEl.textContent = 'Lỗi: ' + err.message;
@@ -475,13 +402,45 @@ ${bodyHtml}
         }
     }
 
-    // ========== Views + Reactions + Comments (giữ nguyên) ==========
+    // ========== Views (chống F5 spam) + Reactions ==========
     function initEngagement() {
         const viewKey = `views_${POST_ID}`;
-        let views = parseInt(localStorage.getItem(viewKey) || '0', 10) + 1;
-        localStorage.setItem(viewKey, views);
+        const lastViewKey = `lastview_${POST_ID}`;
+        const fingerprintKey = `fp_${POST_ID}`;
+        const COOLDOWN_MS = 12 * 60 * 60 * 1000; // 12 giờ
+
+        function getFingerprint() {
+            const raw = [
+                navigator.userAgent,
+                navigator.language,
+                screen.width + 'x' + screen.height,
+                screen.colorDepth,
+                new Date().getTimezoneOffset()
+            ].join('|');
+            let hash = 0;
+            for (let i = 0; i < raw.length; i++) {
+                hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+                hash |= 0;
+            }
+            return 'fp_' + Math.abs(hash);
+        }
+
+        const fp = getFingerprint();
+        const now = Date.now();
+        let views = parseInt(localStorage.getItem(viewKey) || '0', 10);
+        const lastView = parseInt(localStorage.getItem(lastViewKey) || '0', 10);
+        const lastFp = localStorage.getItem(fingerprintKey);
+
+        const shouldCount = (lastFp !== fp) || (now - lastView > COOLDOWN_MS);
+        if (shouldCount) {
+            views += 1;
+            localStorage.setItem(viewKey, views);
+            localStorage.setItem(lastViewKey, now);
+            localStorage.setItem(fingerprintKey, fp);
+        }
         document.querySelector('#view-count span').textContent = views;
 
+        // Reactions
         const reactKey = `react_${POST_ID}`;
         const reactedKey = `reacted_${POST_ID}`;
         let reactions = JSON.parse(localStorage.getItem(reactKey) || '{"like":0,"clap":0,"wow":0,"think":0,"angry":0}');
@@ -559,7 +518,6 @@ ${bodyHtml}
             document.getElementById('comment-text').value = '';
             renderComments();
         });
-
         renderComments();
     }
 
