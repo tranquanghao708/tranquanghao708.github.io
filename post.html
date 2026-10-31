@@ -21,6 +21,7 @@
             --radius: 8px;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
         body {
             font-family: var(--font-sans);
             background: var(--bg);
@@ -62,7 +63,6 @@
         .markdown-body h1 { border-bottom: 1px solid var(--border); padding-bottom: 0.4em; }
         .markdown-body pre { background: #0a0e14 !important; border: 1px solid var(--border); }
 
-        /* Alerts */
         .markdown-alert {
             padding: 0.85rem 1rem;
             margin: 1.25rem 0;
@@ -89,7 +89,6 @@
         .markdown-alert-caution   { border-color: #da3633; }
         .markdown-alert-caution .markdown-alert-title { color: #f85149; }
 
-        /* Table */
         .markdown-body table {
             border-spacing: 0; border-collapse: collapse;
             display: block; width: max-content; max-width: 100%;
@@ -123,12 +122,35 @@
             margin-top: 0.3em; margin-bottom: 0.3em;
         }
 
+        /* Heading hover: hiện nút copy link section */
+        .markdown-body h1, .markdown-body h2, .markdown-body h3,
+        .markdown-body h4, .markdown-body h5, .markdown-body h6 {
+            position: relative;
+        }
+        .heading-anchor {
+            position: absolute;
+            left: -1.4rem;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0;
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.9em;
+            padding: 0 0.25rem;
+            transition: opacity 0.15s;
+        }
+        .markdown-body h1:hover .heading-anchor,
+        .markdown-body h2:hover .heading-anchor,
+        .markdown-body h3:hover .heading-anchor,
+        .markdown-body h4:hover .heading-anchor {
+            opacity: 1;
+        }
+
         .post-meta {
             font-family: var(--font-mono); font-size: 0.82rem;
             color: var(--text-dim); margin-bottom: 1.5rem;
         }
 
-        /* Views (chỉ đếm local, chống F5) */
         .views-bar {
             margin: 2.2rem 0 1rem;
             padding-top: 1.2rem;
@@ -136,25 +158,83 @@
             font-family: var(--font-mono);
             font-size: 0.85rem;
             color: var(--text-dim);
+            display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;
         }
 
-        /* Giscus container */
+        /* Share / link tools for comments */
+        .share-tools {
+            margin: 1rem 0 1.5rem;
+            padding: 1rem 1.15rem;
+            background: #161b22;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+        .share-tools h3 {
+            font-size: 0.95rem;
+            color: #fff;
+            margin-bottom: 0.6rem;
+            font-weight: 600;
+        }
+        .share-tools p {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+        .share-row {
+            display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
+        }
+        .share-row input {
+            flex: 1; min-width: 180px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.45rem 0.7rem;
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            outline: none;
+        }
+        .share-row input:focus { border-color: var(--accent); }
+        .btn-copy {
+            background: var(--accent);
+            color: #0d1117;
+            border: none;
+            border-radius: 6px;
+            padding: 0.45rem 0.9rem;
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn-copy:hover { opacity: 0.9; }
+        .btn-copy.copied { background: #3fb950; }
+
         .comments-wrap {
-            margin-top: 2.5rem;
+            margin-top: 1.5rem;
             padding-top: 1.5rem;
             border-top: 1px solid var(--border);
         }
         .comments-wrap h2 {
             font-size: 1.15rem;
             color: #fff;
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
         }
         .comments-hint {
             font-size: 0.88rem;
             color: var(--text-dim);
-            margin-bottom: 1.2rem;
+            margin-bottom: 1rem;
+            line-height: 1.55;
         }
-        .comments-hint a { color: var(--accent); }
+        .comments-hint code {
+            font-family: var(--font-mono);
+            background: #21262d;
+            padding: 0.1em 0.35em;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: var(--accent);
+        }
+        .comments-hint strong { color: var(--text-muted); }
 
         .back-link {
             display: inline-block; margin-top: 2.5rem;
@@ -167,11 +247,7 @@
             border-top: 1px solid var(--border);
             font-size: 0.84rem; color: var(--text-dim);
         }
-
-        /* Giscus dark blend */
-        .giscus, .giscus-frame {
-            color-scheme: dark;
-        }
+        .giscus, .giscus-frame { color-scheme: dark; }
     </style>
 </head>
 <body>
@@ -193,18 +269,35 @@
         <div id="content" class="markdown-body"></div>
     </article>
 
-    <!-- View count (local, chống spam F5) -->
     <div class="views-bar" id="views-bar" style="display:none">
-        👁 <span id="view-count">0</span> lượt xem (trên trình duyệt này, chống F5 spam)
+        👁 <span id="view-count">0</span> lượt xem (trình duyệt này · chống F5 spam)
     </div>
 
-    <!-- Bình luận + cảm xúc PUBLIC qua Giscus -->
+    <!-- Công cụ copy link để dán vào bình luận -->
+    <div class="share-tools" id="share-tools" style="display:none">
+        <h3>Link để trao đổi trong bình luận</h3>
+        <p>
+            Copy link bài hoặc link tới mục (heading) rồi dán vào ô bình luận Giscus.
+            Người khác bấm vào sẽ nhảy đúng chỗ.
+        </p>
+        <div class="share-row">
+            <input type="text" id="post-link" readonly>
+            <button type="button" class="btn-copy" id="btn-copy-post">Copy link bài</button>
+        </div>
+        <div class="share-row" style="margin-top:0.5rem">
+            <input type="text" id="section-link" readonly placeholder="Hover heading trong bài → bấm # để lấy link mục">
+            <button type="button" class="btn-copy" id="btn-copy-section">Copy link mục</button>
+        </div>
+    </div>
+
     <div class="comments-wrap" id="comments-wrap" style="display:none">
         <h2>Bình luận & cảm xúc</h2>
         <p class="comments-hint">
-            Bình luận và reaction dùng <strong>GitHub Discussions</strong> (Giscus) —
-            mọi người đều thấy, bạn đọc/trả lời ngay trên GitHub.
-            Cần đăng nhập GitHub để bình luận.
+            Dùng <strong>GitHub Discussions</strong> (Giscus) — public, mọi máy đều thấy.<br>
+            • <strong>Sửa / xóa</strong>: đăng nhập GitHub → hover bình luận của bạn → Edit / Delete<br>
+            • <strong>Gắn thẻ</strong>: gõ <code>@username</code> trong bình luận<br>
+            • <strong>Reaction</strong>: dùng hàng cảm xúc của GitHub trên từng bình luận / discussion<br>
+            • <strong>Link mục</strong>: copy ở khung phía trên rồi dán vào bình luận để trỏ đúng đoạn bài
         </p>
         <div id="giscus-container"></div>
     </div>
@@ -219,22 +312,21 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
 <script>
 (function () {
-    // ========== CẤU HÌNH REPO ==========
     const CONFIG = {
         owner: 'tranquanghao708',
-        repo: 'tranquanghao708.github.io',   // ← sửa đúng repo
+        repo: 'tranquanghao708.github.io',
         branch: 'main'
     };
 
-    // ========== CẤU HÌNH GISCUS (lấy từ https://giscus.app) ==========
+    // Lấy từ https://giscus.app sau khi bật Discussions + cài Giscus app
     const GISCUS = {
-        repo: 'tranquanghao708/tranquanghao708.github.io',  // owner/repo
-        repoId: 'R_kgDOVeKpJQ',          // ← PASTE data-repo-id từ giscus.app
-        category: 'Announcements',     // ← hoặc category bạn tạo (Blog / Comments)
-        categoryId: 'DIC_kwDOVeKpJc4DKFfr',    // ← PASTE data-category-id từ giscus.app
-        mapping: 'pathname',           // mỗi trang 1 discussion theo đường dẫn
+        repo: 'tranquanghao708/tranquanghao708.github.io',
+        repoId: 'R_kgDOVeKpJQ',           // ← PASTE
+        category: 'Announcements',
+        categoryId: 'DIC_kwDOVeKpJc4DKFfr',     // ← PASTE
+        mapping: 'specific',            // dùng data-term tự set
         strict: '0',
-        reactionsEnabled: '1',         // bật reaction (👍 ❤️ 😂 …) của GitHub
+        reactionsEnabled: '1',
         emitMetadata: '0',
         inputPosition: 'top',
         theme: 'dark',
@@ -242,7 +334,6 @@
         loading: 'lazy'
     };
 
-    // ========== Slug GitHub-like ==========
     function githubSlug(text) {
         return text.toString().trim().toLowerCase()
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -307,6 +398,74 @@ ${bodyHtml}
     const articleEl = document.getElementById('article');
     const contentEl = document.getElementById('content');
 
+    function getPostUrl(hash) {
+        const u = new URL(location.href);
+        u.hash = hash || '';
+        return u.toString();
+    }
+
+    function enhanceHeadings() {
+        contentEl.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]').forEach(h => {
+            const id = h.id;
+            if (!id || h.querySelector('.heading-anchor')) return;
+            const a = document.createElement('a');
+            a.className = 'heading-anchor';
+            a.href = `#${id}`;
+            a.textContent = '#';
+            a.title = 'Copy link tới mục này';
+            a.addEventListener('click', (e) => {
+                e.preventDefault();
+                const full = getPostUrl(`#${id}`);
+                history.replaceState(null, '', `#${id}`);
+                const sectionInput = document.getElementById('section-link');
+                sectionInput.value = full;
+                navigator.clipboard.writeText(full).then(() => {
+                    const btn = document.getElementById('btn-copy-section');
+                    btn.textContent = 'Đã copy!';
+                    btn.classList.add('copied');
+                    setTimeout(() => {
+                        btn.textContent = 'Copy link mục';
+                        btn.classList.remove('copied');
+                    }, 1500);
+                });
+                document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+            });
+            h.prepend(a);
+        });
+    }
+
+    function setupShareTools() {
+        const postLink = getPostUrl('');
+        document.getElementById('post-link').value = postLink;
+
+        document.getElementById('btn-copy-post').addEventListener('click', function () {
+            navigator.clipboard.writeText(postLink).then(() => {
+                this.textContent = 'Đã copy!';
+                this.classList.add('copied');
+                setTimeout(() => {
+                    this.textContent = 'Copy link bài';
+                    this.classList.remove('copied');
+                }, 1500);
+            });
+        });
+
+        document.getElementById('btn-copy-section').addEventListener('click', function () {
+            const v = document.getElementById('section-link').value;
+            if (!v) {
+                alert('Hãy hover vào một heading trong bài và bấm dấu # bên trái để lấy link mục trước.');
+                return;
+            }
+            navigator.clipboard.writeText(v).then(() => {
+                this.textContent = 'Đã copy!';
+                this.classList.add('copied');
+                setTimeout(() => {
+                    this.textContent = 'Copy link mục';
+                    this.classList.remove('copied');
+                }, 1500);
+            });
+        });
+    }
+
     async function loadMarkdown() {
         let mdText = '';
         let sourceLabel = '';
@@ -320,7 +479,6 @@ ${bodyHtml}
                 const apiUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/posts/${encodeURIComponent(file)}?ref=${CONFIG.branch}`;
                 let downloadUrl = `posts/${file}`;
                 let version = Date.now();
-
                 try {
                     const apiRes = await fetch(apiUrl, {
                         cache: 'no-store',
@@ -331,9 +489,7 @@ ${bodyHtml}
                         if (info.download_url) downloadUrl = info.download_url;
                         if (info.sha) version = info.sha.slice(0, 8);
                     }
-                } catch (e) {
-                    console.warn('API fallback', e);
-                }
+                } catch (e) { console.warn('API fallback', e); }
 
                 const res = await fetch(`${downloadUrl}${downloadUrl.includes('?') ? '&' : '?'}v=${version}`, {
                     cache: 'no-store'
@@ -346,14 +502,15 @@ ${bodyHtml}
             }
 
             let processed = preprocessAlerts(mdText);
-            let html = marked.parse(processed);
-            contentEl.innerHTML = html;
+            contentEl.innerHTML = marked.parse(processed);
             contentEl.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+            enhanceHeadings();
 
             document.getElementById('post-meta').textContent = `Nguồn: ${sourceLabel} · đang học`;
             statusEl.style.display = 'none';
             articleEl.style.display = 'block';
-            document.getElementById('views-bar').style.display = 'block';
+            document.getElementById('views-bar').style.display = 'flex';
+            document.getElementById('share-tools').style.display = 'block';
             document.getElementById('comments-wrap').style.display = 'block';
             document.getElementById('back-link').style.display = 'inline-block';
             document.getElementById('footer').style.display = 'block';
@@ -361,9 +518,16 @@ ${bodyHtml}
             const h1 = contentEl.querySelector('h1');
             document.title = (h1 ? h1.textContent : 'Bài viết') + ' | Trần Quang Hào';
 
+            setupShareTools();
+
+            // Redirect / scroll tới hash (từ link trong bình luận)
             if (location.hash) {
-                const target = document.querySelector(location.hash);
-                if (target) setTimeout(() => target.scrollIntoView({ behavior: 'smooth' }), 120);
+                const id = location.hash.slice(1);
+                const target = document.getElementById(id) || document.querySelector(location.hash);
+                if (target) {
+                    setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+                    document.getElementById('section-link').value = getPostUrl(location.hash);
+                }
             }
 
             initViews();
@@ -375,7 +539,6 @@ ${bodyHtml}
         }
     }
 
-    // ========== View count (local + chống F5) ==========
     function initViews() {
         const viewKey = `views_${POST_ID}`;
         const lastViewKey = `lastview_${POST_ID}`;
@@ -411,35 +574,46 @@ ${bodyHtml}
         document.getElementById('view-count').textContent = views;
     }
 
-    // ========== Giscus (bình luận + reaction PUBLIC) ==========
     function loadGiscus() {
         const container = document.getElementById('giscus-container');
-        container.innerHTML = ''; // clear nếu reload
+        container.innerHTML = '';
+
+        // term ổn định theo file → mỗi bài 1 discussion
+        const term = file
+            ? `posts/${file}`
+            : (url || location.pathname + location.search);
 
         const script = document.createElement('script');
         script.src = 'https://giscus.app/client.js';
         script.async = true;
         script.crossOrigin = 'anonymous';
-
         script.setAttribute('data-repo', GISCUS.repo);
         script.setAttribute('data-repo-id', GISCUS.repoId);
         script.setAttribute('data-category', GISCUS.category);
         script.setAttribute('data-category-id', GISCUS.categoryId);
-        script.setAttribute('data-mapping', GISCUS.mapping);
+        script.setAttribute('data-mapping', 'specific');
+        script.setAttribute('data-term', term);
         script.setAttribute('data-strict', GISCUS.strict);
-        script.setAttribute('data-reactions-enabled', GISCUS.reactionsEnabled);
-        script.setAttribute('data-emit-metadata', GISCUS.emitMetadata);
-        script.setAttribute('data-input-position', GISCUS.inputPosition);
-        script.setAttribute('data-theme', GISCUS.theme);
-        script.setAttribute('data-lang', GISCUS.lang);
-        script.setAttribute('data-loading', GISCUS.loading);
-
-        // Quan trọng: mỗi bài 1 discussion riêng theo file
-        // Dùng pathname + query để tách bài (post.html?file=xxx.md)
-        script.setAttribute('data-term', location.pathname + location.search);
-
+        script.setAttribute('data-reactions-enabled', '1');
+        script.setAttribute('data-emit-metadata', '0');
+        script.setAttribute('data-input-position', 'top');
+        script.setAttribute('data-theme', 'dark');
+        script.setAttribute('data-lang', 'vi');
+        script.setAttribute('data-loading', 'lazy');
         container.appendChild(script);
     }
+
+    // Khi người dùng bấm link # trong trang (hoặc từ bình luận sau khi load)
+    window.addEventListener('hashchange', () => {
+        const id = location.hash.slice(1);
+        if (!id) return;
+        const target = document.getElementById(id);
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const sectionInput = document.getElementById('section-link');
+            if (sectionInput) sectionInput.value = getPostUrl(location.hash);
+        }
+    });
 
     loadMarkdown();
 })();
