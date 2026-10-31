@@ -58,6 +58,7 @@
             color: var(--text-dim); font-family: var(--font-mono);
         }
         .status.error { color: #f85149; }
+        .status-sub { font-size: 0.8rem; opacity: 0.75; margin-top: 0.5rem; }
 
         .markdown-body {
             background: transparent !important;
@@ -74,7 +75,6 @@
             overflow-x: auto;
         }
 
-        /* Inline code giống GitHub — kể cả trong heading / bold */
         .markdown-body code {
             font-family: var(--font-mono);
             font-size: 85%;
@@ -108,7 +108,6 @@
             color: inherit;
         }
 
-        /* Ảnh */
         .markdown-body img {
             max-width: 100%;
             height: auto;
@@ -118,9 +117,7 @@
             margin: 1rem 0;
             background: #0a0e14;
         }
-        .markdown-body p > img { margin: 0.75rem auto; }
 
-        /* KaTeX */
         .markdown-body .katex { font-size: 1.05em; }
         .markdown-body .katex-display {
             overflow-x: auto;
@@ -129,7 +126,6 @@
             margin: 1rem 0;
         }
 
-        /* Alerts */
         .markdown-alert {
             padding: 0.85rem 1rem;
             margin: 1.25rem 0;
@@ -169,7 +165,6 @@
         .markdown-body table tr:nth-child(2n) { background: #161b22; }
         .markdown-body table th { font-weight: 600; background: #161b22; }
 
-        /* details — hết thanh trượt ngang cả khối */
         .markdown-body details {
             background: #161b22;
             border: 1px solid #30363d;
@@ -195,12 +190,9 @@
             color: var(--accent);
             transition: transform 0.15s;
         }
-        .markdown-body details[open] summary::before {
-            transform: rotate(90deg);
-        }
+        .markdown-body details[open] summary::before { transform: rotate(90deg); }
         .markdown-body details[open] summary { margin-bottom: 0.75rem; }
         .markdown-body details pre,
-        .markdown-body details .highlight,
         .markdown-body details table {
             max-width: 100%;
             overflow-x: auto;
@@ -225,18 +217,28 @@
         .markdown-body h1, .markdown-body h2, .markdown-body h3,
         .markdown-body h4, .markdown-body h5, .markdown-body h6 {
             position: relative;
-            scroll-margin-top: 72px; /* sticky nav */
+            scroll-margin-top: 80px;
+            transition: background-color 0.35s ease;
+            border-radius: 4px;
+        }
+        .markdown-body h1:target,
+        .markdown-body h2:target,
+        .markdown-body h3:target,
+        .markdown-body h4:target,
+        .markdown-body .heading-flash {
+            background: rgba(88, 166, 255, 0.12);
+            box-shadow: 0 0 0 4px rgba(88, 166, 255, 0.12);
         }
         .heading-anchor {
             position: absolute;
-            left: -1.4rem;
-            top: 50%;
-            transform: translateY(-50%);
+            left: -1.35rem;
+            top: 0.35em;
             opacity: 0;
             color: var(--accent);
             text-decoration: none;
+            font-weight: 600;
             font-size: 0.9em;
-            padding: 0 0.25rem;
+            padding: 0 0.2rem;
             transition: opacity 0.15s;
         }
         .markdown-body h1:hover .heading-anchor,
@@ -349,7 +351,10 @@
         </nav>
     </div>
 
-    <div id="status" class="status">Đang tải bài viết…</div>
+    <div id="status" class="status">
+        <div>Đang tải bài viết…</div>
+        <div class="status-sub" id="status-sub"></div>
+    </div>
 
     <article id="article" style="display:none">
         <div class="post-meta" id="post-meta"></div>
@@ -377,9 +382,9 @@
         <h2>Bình luận &amp; cảm xúc</h2>
         <p class="comments-hint">
             GitHub Discussions (Giscus) — public.<br>
-            • Sửa/xóa: đăng nhập GitHub → hover comment → Edit/Delete<br>
-            • Gắn thẻ: <code>@username</code> · Reaction trên discussion<br>
-            • Link mục: copy ở khung trên rồi dán vào bình luận
+            • <strong>Sửa / xóa</strong>: đăng nhập GitHub → hover comment → Edit / Delete<br>
+            • <strong>Gắn thẻ</strong>: <code>@username</code> · Reaction trên discussion<br>
+            • <strong>Link mục</strong>: copy ở khung trên rồi dán vào bình luận
         </p>
         <div id="giscus-container"></div>
     </div>
@@ -432,7 +437,6 @@
         warning: 'Warning', caution: 'Caution'
     };
 
-    /** Slug gần GitHub — hỗ trợ số, tiếng Việt, bỏ dấu */
     function githubSlug(text) {
         return String(text)
             .trim()
@@ -456,7 +460,7 @@
         return DOMPurify.sanitize(dirty, {
             USE_PROFILES: { html: true },
             ADD_TAGS: ['details', 'summary', 'kbd', 'img'],
-            ADD_ATTR: ['open', 'aria-hidden', 'target', 'rel', 'class', 'id', 'src', 'alt', 'loading', 'width', 'height'],
+            ADD_ATTR: ['open', 'aria-hidden', 'target', 'rel', 'class', 'id', 'src', 'alt', 'loading', 'width', 'height', 'data-slug'],
             FORBID_TAGS: ['style', 'iframe', 'object', 'embed', 'form'],
             FORBID_ATTR: ['style']
         });
@@ -483,7 +487,7 @@ ${bodyHtml}
         const plain = String(text).replace(/<[^>]+>/g, '');
         const id = githubSlug(plain);
         const d = Math.min(6, Math.max(1, depth | 0));
-        return `<h${d} id="${id}">${text}</h${d}>\n`;
+        return `<h${d} id="${id}" data-slug="${id}">${text}</h${d}>\n`;
     };
     renderer.link = function ({ href, title, text }) {
         const t = title ? ` title="${String(title).replace(/"/g, '&quot;')}"` : '';
@@ -496,9 +500,6 @@ ${bodyHtml}
     };
     renderer.image = function ({ href, title, text }) {
         let src = String(href || '');
-        if (!/^https?:\/\//i.test(src) && !src.startsWith('/') && !src.startsWith('./') && !src.startsWith('../')) {
-            src = src; // relative ok
-        }
         if (/^\s*javascript:/i.test(src)) return '';
         const alt = String(text || '').replace(/"/g, '&quot;');
         const t = title ? ` title="${String(title).replace(/"/g, '&quot;')}"` : '';
@@ -541,9 +542,12 @@ ${bodyHtml}
     const articleEl = document.getElementById('article');
     const contentEl = document.getElementById('content');
 
+    const sub = document.getElementById('status-sub');
+    if (sub) sub.textContent = file ? file : (url ? 'nguồn ngoài' : '');
+
     function showError(msg) {
         statusEl.className = 'status error';
-        statusEl.textContent = 'Lỗi: ' + msg;
+        statusEl.innerHTML = '<div>Lỗi: ' + String(msg).replace(/</g, '&lt;') + '</div>';
     }
 
     async function fetchText(resourceUrl, options) {
@@ -568,45 +572,66 @@ ${bodyHtml}
         return u.toString();
     }
 
-    function scrollToHash() {
-        let raw = location.hash.replace(/^#/, '');
-        if (!raw) return false;
+    function decodeHashRaw() {
+        let raw = (location.hash || '').replace(/^#/, '');
+        if (!raw) return '';
         try { raw = decodeURIComponent(raw); } catch (e) {}
-        const id = githubSlug(raw) === raw ? raw : raw;
-        let target = document.getElementById(raw) || document.getElementById(githubSlug(raw));
-        if (!target && /^[a-zA-Z0-9._-]+$/.test(raw)) {
-            target = document.getElementById(raw);
-        }
-        if (target) {
-            requestAnimationFrame(() => {
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            });
-            const sectionInput = document.getElementById('section-link');
-            if (sectionInput) sectionInput.value = getPostUrl('#' + target.id);
-            return true;
-        }
-        return false;
+        return raw.trim();
     }
 
-    function enhanceHeadings() {
-        contentEl.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]').forEach(h => {
-            const id = h.id;
-            if (!id || h.querySelector('.heading-anchor')) return;
-            const a = document.createElement('a');
-            a.className = 'heading-anchor';
-            a.href = '#' + id;
-            a.textContent = '#';
-            a.title = 'Copy link tới mục này';
-            a.addEventListener('click', (e) => {
-                e.preventDefault();
-                const full = getPostUrl('#' + id);
-                history.replaceState(null, '', '#' + id);
-                document.getElementById('section-link').value = full;
-                copyText(full).then(() => flashBtn(document.getElementById('btn-copy-section'), 'Copy link mục'));
-                h.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            });
-            h.prepend(a);
-        });
+    function findHeadingByHash(raw) {
+        if (!raw || !contentEl) return null;
+        let el = document.getElementById(raw);
+        if (el) return el;
+        const slug = githubSlug(raw);
+        el = document.getElementById(slug);
+        if (el) return el;
+        try {
+            el = contentEl.querySelector('[data-slug="' + CSS.escape(slug) + '"]');
+            if (el) return el;
+        } catch (e) {}
+        const heads = contentEl.querySelectorAll('h1,h2,h3,h4,h5,h6');
+        for (const h of heads) {
+            const plain = (h.textContent || '').replace(/\s+/g, ' ').trim();
+            if (githubSlug(plain) === slug) return h;
+            if (plain.toLowerCase() === raw.toLowerCase()) return h;
+        }
+        return null;
+    }
+
+    function flashHeading(el) {
+        if (!el) return;
+        el.classList.add('heading-flash');
+        clearTimeout(el._flashTimer);
+        el._flashTimer = setTimeout(() => el.classList.remove('heading-flash'), 1600);
+    }
+
+    function scrollToHash(opts) {
+        const behavior = (opts && opts.behavior) || 'smooth';
+        const raw = decodeHashRaw();
+        if (!raw) return false;
+        const target = findHeadingByHash(raw);
+        if (!target) return false;
+        if (target.id && location.hash.replace(/^#/, '') !== target.id) {
+            history.replaceState(null, '', '#' + target.id);
+        }
+        const top = target.getBoundingClientRect().top + window.pageYOffset - 72;
+        window.scrollTo({ top: Math.max(0, top), behavior });
+        flashHeading(target);
+        const sectionInput = document.getElementById('section-link');
+        if (sectionInput) sectionInput.value = getPostUrl('#' + target.id);
+        return true;
+    }
+
+    function ensureScrollToHash() {
+        let tries = 0;
+        const maxTries = 12;
+        const tick = () => {
+            tries += 1;
+            const ok = scrollToHash({ behavior: tries <= 2 ? 'auto' : 'smooth' });
+            if (!ok && tries < maxTries) setTimeout(tick, 80 + tries * 40);
+        };
+        tick();
     }
 
     function copyText(text) {
@@ -632,6 +657,56 @@ ${bodyHtml}
             btn.textContent = label;
             btn.classList.remove('copied');
         }, 1500);
+    }
+
+    function enhanceHeadings() {
+        contentEl.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(h => {
+            const plain = (h.textContent || '').replace(/\s+/g, ' ').trim();
+            if (!plain) return;
+            const slug = githubSlug(plain);
+            if (!h.id) h.id = slug;
+            h.setAttribute('data-slug', githubSlug(h.id) || slug);
+            if (h.querySelector('.heading-anchor')) return;
+
+            const a = document.createElement('a');
+            a.className = 'heading-anchor';
+            a.href = '#' + h.id;
+            a.textContent = '#';
+            a.title = 'Copy link tới mục này';
+            a.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const full = getPostUrl('#' + h.id);
+                history.replaceState(null, '', '#' + h.id);
+                const sectionInput = document.getElementById('section-link');
+                if (sectionInput) sectionInput.value = full;
+                copyText(full).then(() => {
+                    const btn = document.getElementById('btn-copy-section');
+                    if (btn) flashBtn(btn, 'Copy link mục');
+                });
+                scrollToHash({ behavior: 'smooth' });
+            });
+            h.prepend(a);
+        });
+
+        contentEl.addEventListener('click', function (e) {
+            const a = e.target.closest('a[href^="#"]');
+            if (!a || !contentEl.contains(a)) return;
+            const href = a.getAttribute('href') || '';
+            if (href.length < 2) return;
+            e.preventDefault();
+            const id = href.slice(1);
+            history.pushState(null, '', '#' + id);
+            requestAnimationFrame(() => {
+                if (!scrollToHash({ behavior: 'smooth' })) {
+                    const t = findHeadingByHash(id);
+                    if (t) {
+                        history.replaceState(null, '', '#' + t.id);
+                        scrollToHash({ behavior: 'smooth' });
+                    }
+                }
+            });
+        });
     }
 
     function setupShareTools() {
@@ -740,11 +815,7 @@ ${bodyHtml}
             document.title = titleText.slice(0, 80) + ' | Trần Quang Hào';
 
             setupShareTools();
-
-            // Redirect sau khi render + ảnh/math
-            setTimeout(scrollToHash, 50);
-            setTimeout(scrollToHash, 300);
-
+            ensureScrollToHash();
             initViews();
             loadGiscus();
         } catch (err) {
@@ -794,11 +865,7 @@ ${bodyHtml}
         document.getElementById('view-count').textContent = String(views);
     }
 
-    /**
-     * Giscus term TỰ ĐỘNG theo ?file= (không hardcode từng bài).
-     * Format cố định: đúng tên file trong URL → thêm bài mới không cần sửa JS.
-     * Đổi format này mới làm “mất” discussion cũ.
-     */
+    /** term = tên file từ ?file= — tự động, không hardcode từng bài */
     function loadGiscus() {
         const container = document.getElementById('giscus-container');
         if (!container) return;
@@ -829,7 +896,8 @@ ${bodyHtml}
         console.info('[giscus] term =', term);
     }
 
-    window.addEventListener('hashchange', () => scrollToHash());
+    window.addEventListener('hashchange', () => scrollToHash({ behavior: 'smooth' }));
+    window.addEventListener('popstate', () => scrollToHash({ behavior: 'smooth' }));
 
     loadMarkdown();
 })();
