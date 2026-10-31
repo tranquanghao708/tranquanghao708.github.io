@@ -1,18 +1,35 @@
-# Nhìn lại stack frame khi gọi hàm (x86-64)
+# 1. Tổng quan
+
+Xem nhanh: [1. Tổng quan](#1-tong-quan)
 
 > [!NOTE]
-> Đây là ghi chú cá nhân khi mình đang học. Có thể còn sai sót.
+> Đây là ghi chú.
+> Có thể viết nhiều dòng.
+> - list cũng được
+> - **in đậm** cũng được
 
-Khi học assembly, mình hay bị rối ở chỗ “hàm gọi hàm thì stack thay đổi thế nào”.
+> [!WARNING]
+> Cẩn thận khi dùng optimization.
 
-## Stack frame cơ bản
+| Cột 1 | Cột 2 |
+|-------|-------|
+| A     | B     |
+| C     | D     |
 
-Mỗi lần gọi hàm, CPU thường đẩy địa chỉ trả về vào stack.
+<details>
+<summary>Bấm để xem thêm</summary>
 
-```asm
-push rbp
-mov  rbp, rsp
-sub  rsp, 0x20      ; chỗ cho biến local
-; ... làm việc ...
-leave
-ret
+Nội dung ẩn ở đây.
+
+</details>
+
+Nhấn phím <kbd>Ctrl</kbd> + <kbd>C</kbd>
+
+---
+
+## Danh sách lồng
+
+- Mục 1
+  - Mục 1.1
+    - Mục 1.1.1
+- Mục 2
