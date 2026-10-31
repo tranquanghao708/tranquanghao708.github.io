@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ghi chú | Trần Quang Hào</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬡</text></svg>">
+    <style>
+        /* Copy toàn bộ :root + base styles từ index.html (giống hệt) */
+        :root {
+            --bg: #0d1117; --bg-elevated: #161b22; --bg-card: #1c2128;
+            --border: #30363d; --border-hover: #484f58;
+            --text: #e6edf3; --text-muted: #8b949e; --text-dim: #6e7681;
+            --accent: #58a6ff; --accent-dim: #388bfd33; --green: #3fb950;
+            --font-mono: "SFMono-Regular", "Cascadia Code", "Fira Code", Consolas, Menlo, monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+            --radius: 8px; --shadow: 0 4px 24px rgba(0,0,0,0.4);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font-sans); background: var(--bg); color: var(--text);
+            line-height: 1.65; min-height: 100vh;
+            background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(88,166,255,0.07), transparent),
+                              linear-gradient(180deg, var(--bg) 0%, #0a0e14 100%);
+        }
+        .container { max-width: 820px; margin: 0 auto; padding: 0 1.25rem 4rem; }
+        .top-bar {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(13,17,23,0.88); backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            margin: 0 -1.25rem 2.5rem; padding: 0 1.25rem;
+        }
+        .nav {
+            display: flex; align-items: center; justify-content: space-between;
+            height: 56px; max-width: 820px; margin: 0 auto;
+        }
+        .logo {
+            font-family: var(--font-mono); font-size: 0.95rem; font-weight: 600;
+            color: var(--text); text-decoration: none; display: flex; gap: 0.45rem;
+        }
+        .logo span { color: var(--accent); }
+        .nav-links { display: flex; gap: 1.4rem; list-style: none; }
+        .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
+        .nav-links a:hover, .nav-links a.active { color: var(--accent); }
+
+        h1 { font-size: 1.6rem; color: #fff; margin-bottom: 0.4rem; }
+        .page-desc { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.98rem; }
+
+        .post-list { display: grid; gap: 1rem; }
+        .post-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 1.25rem 1.4rem;
+            transition: border-color 0.2s, transform 0.2s;
+            text-decoration: none; color: inherit; display: block;
+        }
+        .post-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .post-meta {
+            font-family: var(--font-mono); font-size: 0.8rem;
+            color: var(--text-dim); margin-bottom: 0.45rem;
+        }
+        .post-card h2 {
+            font-size: 1.1rem; color: #fff; margin-bottom: 0.35rem;
+            font-weight: 600;
+        }
+        .post-card p { font-size: 0.9rem; color: var(--text-muted); margin: 0; }
+
+        .empty-state {
+            background: var(--bg-elevated); border: 1px dashed var(--border);
+            border-radius: var(--radius); padding: 2.5rem 1.5rem;
+            text-align: center; color: var(--text-dim);
+        }
+
+        footer {
+            margin-top: 3.5rem; padding-top: 1.8rem;
+            border-top: 1px solid var(--border);
+            display: flex; flex-wrap: wrap; justify-content: space-between;
+            font-size: 0.84rem; color: var(--text-dim); gap: 1rem;
+        }
+        footer a { color: var(--text-muted); text-decoration: none; }
+        footer a:hover { color: var(--accent); }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="top-bar">
+        <nav class="nav">
+            <a href="index.html" class="logo"><span>~/</span>tranquanghao</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Trang chủ</a></li>
+                <li><a href="notes.html" class="active">Ghi chú</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <h1>Ghi chú & Writeup</h1>
+    <p class="page-desc">Những bài viết nhỏ mình ghi lại trong quá trình học. Chọn bài để đọc.</p>
+
+    <div class="post-list">
+        <!-- Bài mẫu -->
+        <a href="posts/sample.html" class="post-card">
+            <div class="post-meta">31/10/2026 · ~6 phút đọc</div>
+            <h2>Nhìn lại stack frame khi gọi hàm (x86-64)</h2>
+            <p>Ghi chú nhỏ về cách tham số và địa chỉ trả về được đẩy vào stack, kèm vài lệnh assembly cơ bản mình đang học.</p>
+        </a>
+
+        <!-- Thêm bài mới chỉ việc copy card này và sửa link + nội dung -->
+        <!--
+        <a href="posts/ten-bai.html" class="post-card">
+            <div class="post-meta">ngày · thời gian đọc</div>
+            <h2>Tiêu đề bài</h2>
+            <p>Mô tả ngắn...</p>
+        </a>
+        -->
+    </div>
+
+    <footer>
+        <p>© 2026 tranquanghao708</p>
+        <a href="https://github.com/tranquanghao708" target="_blank">GitHub</a>
+    </footer>
+</div>
+</body>
+</html>
