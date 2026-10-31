@@ -574,34 +574,55 @@ ${bodyHtml}
         document.getElementById('view-count').textContent = views;
     }
 
-    function loadGiscus() {
-        const container = document.getElementById('giscus-container');
-        container.innerHTML = '';
+function loadGiscus() {
+    const container = document.getElementById('giscus-container');
+    container.innerHTML = '';
 
-        // term ổn định theo file → mỗi bài 1 discussion
-        const term = file
-            ? `posts/${file}`
-            : (url || location.pathname + location.search);
-
-        const script = document.createElement('script');
-        script.src = 'https://giscus.app/client.js';
-        script.async = true;
-        script.crossOrigin = 'anonymous';
-        script.setAttribute('data-repo', GISCUS.repo);
-        script.setAttribute('data-repo-id', GISCUS.repoId);
-        script.setAttribute('data-category', GISCUS.category);
-        script.setAttribute('data-category-id', GISCUS.categoryId);
-        script.setAttribute('data-mapping', 'specific');
-        script.setAttribute('data-term', term);
-        script.setAttribute('data-strict', GISCUS.strict);
-        script.setAttribute('data-reactions-enabled', '1');
-        script.setAttribute('data-emit-metadata', '0');
-        script.setAttribute('data-input-position', 'top');
-        script.setAttribute('data-theme', 'dark');
-        script.setAttribute('data-lang', 'vi');
-        script.setAttribute('data-loading', 'lazy');
-        container.appendChild(script);
+    /*
+     * ============================================================
+     * TERM ỔN ĐỊNH — KHÔNG ĐƯỢC ĐỔI FORMAT NÀY
+     * Giscus map bình luận theo đúng chuỗi term.
+     * Đổi format → tạo discussion mới, nhìn như mất comment.
+     * Discussion cũ vẫn còn trên GitHub → tab Discussions.
+     * ============================================================
+     * Format cố định: tên file markdown, ví dụ "stack-frame.md"
+     */
+    let term;
+    if (file) {
+        term = file; // ví dụ: stack-frame.md  ← GIỮ NGUYÊN MÃI
+    } else if (url) {
+        term = 'external:' + url;
+    } else {
+        term = 'general';
     }
+
+    const script = document.createElement('script');
+    script.src = 'https://giscus.app/client.js';
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+
+    script.setAttribute('data-repo', GISCUS.repo);
+    script.setAttribute('data-repo-id', GISCUS.repoId);
+    script.setAttribute('data-category', GISCUS.category);
+    script.setAttribute('data-category-id', GISCUS.categoryId);
+
+    // mapping = specific + term cố định
+    script.setAttribute('data-mapping', 'specific');
+    script.setAttribute('data-term', term);
+    script.setAttribute('data-strict', '0');
+
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'top');
+    script.setAttribute('data-theme', 'dark');
+    script.setAttribute('data-lang', 'vi');
+    script.setAttribute('data-loading', 'lazy');
+
+    container.appendChild(script);
+
+    // Debug: mở Console sẽ thấy term đang dùng
+    console.info('[giscus] term =', term);
+}
 
     // Khi người dùng bấm link # trong trang (hoặc từ bình luận sau khi load)
     window.addEventListener('hashchange', () => {
