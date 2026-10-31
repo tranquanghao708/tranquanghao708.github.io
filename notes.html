@@ -15,7 +15,6 @@
             --text-muted: #8b949e;
             --text-dim: #6e7681;
             --accent: #58a6ff;
-            --green: #3fb950;
             --font-mono: "SFMono-Regular", "Cascadia Code", "Fira Code", Consolas, Menlo, monospace;
             --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
             --radius: 8px;
@@ -54,6 +53,10 @@
 
         h1 { font-size: 1.6rem; color: #fff; margin-bottom: 0.35rem; }
         .page-desc { color: var(--text-muted); margin-bottom: 1.8rem; font-size: 0.98rem; }
+        .page-desc code {
+            font-family: var(--font-mono); background: #0d1117;
+            padding: 0.15em 0.4em; border-radius: 4px; color: var(--accent); font-size: 0.9em;
+        }
 
         .status {
             text-align: center; padding: 3rem 1rem;
@@ -79,7 +82,7 @@
         .post-meta {
             font-family: var(--font-mono); font-size: 0.8rem;
             color: var(--text-dim); margin-bottom: 0.4rem;
-            display: flex; gap: 0.8rem; flex-wrap: wrap;
+            display: flex; gap: 0.9rem; flex-wrap: wrap;
         }
         .post-card h2 {
             font-size: 1.08rem; color: #fff; margin-bottom: 0.3rem;
@@ -126,7 +129,10 @@
     </div>
 
     <h1>Ghi chú & Writeup</h1>
-    <p class="page-desc">Tự động lấy từ thư mục <code style="font-family:var(--font-mono);color:var(--accent)">posts/</code> trong repo. Chỉ cần thả file .md là hiện.</p>
+    <p class="page-desc">
+        Tự động lấy từ thư mục <code>posts/</code> trong repo. 
+        Chỉ cần thả file <code>.md</code> vào là hiện, không cần sửa HTML.
+    </p>
 
     <div id="status" class="status">Đang tải danh sách bài viết…</div>
     <div id="post-list" class="post-list" style="display:none"></div>
@@ -139,32 +145,25 @@
 
 <script>
 (function () {
-    // ========== CẤU HÌNH (sửa đúng repo của bạn) ==========
+    // =====================================================
+    // CẤU HÌNH – SỬA ĐÚNG REPO CỦA BẠN
+    // =====================================================
     const CONFIG = {
-        owner: 'tranquanghao708',      // ← username GitHub
-        repo: 'tranquanghao708.github.io', // ← tên repo GitHub Pages
-        path: 'posts',                 // thư mục chứa file .md
-        branch: 'main'                 // hoặc 'master'
+        owner: 'tranquanghao708',                 // username GitHub
+        repo: 'tranquanghao708.github.io',        // ← tên repo chứa index.html + posts/
+        path: 'posts',                            // thư mục chứa file .md
+        branch: 'main'                            // hoặc 'master'
     };
+    // Nếu repo của bạn tên khác (ví dụ "blog", "notes"...), sửa dòng repo ở trên.
 
     const statusEl = document.getElementById('status');
     const listEl   = document.getElementById('post-list');
 
-    // Chuyển tên file thành tiêu đề đẹp
     function filenameToTitle(name) {
         return name
             .replace(/\.md$/i, '')
             .replace(/[-_]/g, ' ')
             .replace(/\b\w/g, c => c.toUpperCase());
-    }
-
-    // Format ngày từ GitHub API
-    function formatDate(iso) {
-        if (!iso) return '';
-        const d = new Date(iso);
-        return d.toLocaleDateString('vi-VN', {
-            day: '2-digit', month: '2-digit', year: 'numeric'
-        });
     }
 
     async function loadPosts() {
@@ -176,43 +175,39 @@
             });
 
             if (res.status === 404) {
-                throw new Error(`Không tìm thấy thư mục "${CONFIG.path}/". Hãy tạo thư mục và thêm file .md.`);
+                throw new Error(`Không tìm thấy thư mục "${CONFIG.path}/" hoặc sai tên repo. Kiểm tra lại CONFIG.`);
             }
             if (res.status === 403) {
-                throw new Error('GitHub API bị giới hạn rate limit. Thử lại sau vài phút.');
+                throw new Error('GitHub API bị rate limit. Thử lại sau vài phút.');
             }
             if (!res.ok) {
-                throw new Error(`Lỗi API: ${res.status}`);
+                throw new Error(`Lỗi API GitHub: ${res.status}`);
             }
 
             const files = await res.json();
 
-            // Chỉ lấy file .md
-            const mdFiles = files
+            const mdFiles = (Array.isArray(files) ? files : [])
                 .filter(f => f.type === 'file' && f.name.toLowerCase().endsWith('.md'))
-                .sort((a, b) => b.name.localeCompare(a.name)); // mới hơn lên trước (theo tên)
+                .sort((a, b) => b.name.localeCompare(a.name));
 
             if (mdFiles.length === 0) {
-                statusEl.className = 'status';
                 statusEl.innerHTML = `
                     <div class="empty">
-                        <p style="margin-bottom:0.8rem">Chưa có bài viết nào.</p>
-                        <p>Hãy tạo thư mục <code>posts/</code> và thêm file <code>.md</code> vào đó.</p>
+                        <p style="margin-bottom:0.9rem">Chưa có bài viết nào.</p>
+                        <p>Tạo thư mục <code>posts/</code> trong repo, rồi thêm file <code>.md</code> vào đó và push lên.</p>
                     </div>`;
                 return;
             }
 
-            // Render danh sách
+            // Tạo danh sách – link đúng sang post.html?file=...
             listEl.innerHTML = mdFiles.map(file => {
                 const title = filenameToTitle(file.name);
-                // GitHub API contents không trả về ngày commit chi tiết,
-                // nên mình dùng tên file + kích thước cho gọn.
-                // Nếu muốn ngày thật có thể gọi thêm API commits (tốn request hơn).
+                const size = (file.size / 1024).toFixed(1);
                 return `
                     <a href="post.html?file=${encodeURIComponent(file.name)}" class="post-card">
                         <div class="post-meta">
                             <span>${file.name}</span>
-                            <span>${(file.size / 1024).toFixed(1)} KB</span>
+                            <span>${size} KB</span>
                         </div>
                         <h2>${title}</h2>
                         <p>Nhấn để đọc bài viết được render từ Markdown.</p>
