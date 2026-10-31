@@ -80,45 +80,15 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--text);line-he
 .share-row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
 .share-row input{flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.45rem .7rem;color:var(--text);font-family:var(--font-mono);font-size:.82rem;outline:none}
 .btn-copy{background:var(--accent);color:#0d1117;border:none;border-radius:6px;padding:.45rem .9rem;font-family:var(--font-mono);font-size:.82rem;font-weight:600;cursor:pointer}
-.btn-copy:hover{opacity:.9}.btn-copy.copied{background:var(--ok)}.btn-copy:disabled{opacity:.45;cursor:not-allowed}
+.btn-copy:hover{opacity:.9}.btn-copy.copied{background:var(--ok)}
 .comments-wrap{margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border)}
 .comments-wrap h2{font-size:1.15rem;color:#fff;margin-bottom:.5rem}
 .comments-hint{font-size:.88rem;color:var(--dim);margin-bottom:1rem;line-height:1.55}
 .comments-hint code{font-family:var(--font-mono);background:#21262d;padding:.1em .35em;border-radius:4px;color:var(--accent);font-size:.85em}
+.comments-hint strong{color:var(--muted)}
 .back-link{display:inline-block;margin-top:2.5rem;font-family:var(--font-mono);font-size:.88rem;color:var(--accent);text-decoration:none}
 footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);font-size:.84rem;color:var(--dim)}
-
-/* Comments UI */
-.cmt-box{background:#161b22;border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.15rem;margin-bottom:1rem}
-.cmt-row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
-.cmt-box input[type=text],.cmt-box textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.55rem .75rem;color:var(--text);font-size:.95rem;outline:none}
-.cmt-box input[type=text]{flex:1;min-width:160px;width:auto}
-.cmt-box input:focus,.cmt-box textarea:focus{border-color:var(--accent)}
-.cmt-box textarea{resize:vertical;min-height:90px;margin:0 0 .6rem}
-.cmt-status{font-size:.85rem;margin-top:.45rem;min-height:1.25em}
-.cmt-ok{color:var(--ok)}.cmt-bad{color:var(--bad)}.cmt-load{color:var(--muted)}
-.cmt-avatar{width:22px;height:22px;border-radius:50%;border:1px solid var(--border);vertical-align:middle}
-.cmt-avatar-lg{width:28px;height:28px}
-.cmt-userbar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-bottom:.85rem;font-size:.9rem;color:var(--muted)}
-.cmt-userbar span{flex:1}
-.cmt-chip{display:inline-flex;align-items:center;gap:.35rem;padding:.12rem .45rem;margin:0 .1rem;border-radius:6px;background:rgba(88,166,255,.12);border:1px solid rgba(88,166,255,.28);font-family:var(--font-mono);font-size:.82rem;color:var(--accent);text-decoration:none;vertical-align:middle;white-space:nowrap}
-.cmt-chip:hover{border-color:var(--accent)}
-.cmt-chip-icon{width:14px;height:14px;flex-shrink:0}
-.cmt-chip img.cmt-avatar{width:16px;height:16px}
-.cmt-list{display:grid;gap:.85rem;margin-top:.5rem}
-.cmt-item{background:#161b22;border:1px solid var(--border);border-radius:var(--radius);padding:.9rem 1.05rem}
-.cmt-item-head{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-bottom:.45rem;font-size:.82rem;color:var(--dim)}
-.cmt-item-head a.author{display:inline-flex;align-items:center;gap:.35rem;color:var(--accent);text-decoration:none;font-family:var(--font-mono)}
-.cmt-item-body{font-size:.95rem;color:var(--muted);line-height:1.55;white-space:pre-wrap;word-break:break-word}
-.cmt-item-actions{margin-top:.5rem;display:flex;gap:.5rem;flex-wrap:wrap}
-.cmt-item-actions button{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:.75rem;font-family:var(--font-mono);padding:.2rem .5rem;border-radius:4px;cursor:pointer}
-.cmt-item-actions button:hover{color:var(--accent);border-color:var(--accent)}
-.cmt-item-actions button.danger:hover{color:var(--bad);border-color:var(--bad)}
-.cmt-edit-area{width:100%;min-height:70px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:.5rem;font-size:.95rem;margin-top:.35rem}
-.spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:.3rem}
-@keyframes spin{to{transform:rotate(360deg)}}
-.cmt-preview{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.4rem;min-height:0}
-.cmt-compose-meta{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:space-between}
+.giscus,.giscus-frame{color-scheme:dark}
 </style>
 </head>
 <body>
@@ -152,7 +122,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
 
   <div class="share-tools" id="share-tools" style="display:none">
     <h3>Link để trao đổi trong bình luận</h3>
-    <p>Copy link bài hoặc link mục.</p>
+    <p>Copy link bài hoặc link mục rồi dán vào Giscus.</p>
     <div class="share-row">
       <input type="text" id="post-link" readonly>
       <button type="button" class="btn-copy" id="btn-copy-post">Copy link bài</button>
@@ -164,37 +134,15 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   </div>
 
   <div class="comments-wrap" id="comments-wrap" style="display:none">
-    <h2>Bình luận</h2>
+    <h2>Bình luận &amp; cảm xúc</h2>
     <p class="comments-hint">
-      Xác minh bằng <strong>username GitHub thật</strong>. Chỉ sửa/xóa được bình luận của bạn.
-      Gõ <code>@username</code> — hệ thống kiểm tra user có trên GitHub không.
-      <br><em>Lưu trên trình duyệt này (GitHub Pages không có server ghi chung). Cùng máy/profile sẽ thấy lại.</em>
+      Dùng <strong>GitHub Discussions</strong> (Giscus) — public, mọi máy trên thế giới đều thấy.<br>
+      • <strong>Sửa / xóa</strong>: đăng nhập GitHub → hover vào bình luận <em>của bạn</em> → <code>Edit</code> / <code>Delete</code><br>
+      • <strong>Góp ý / trả lời</strong>: như mạng xã hội, ai cũng comment được (cần tài khoản GitHub)<br>
+      • <strong>Reaction</strong>: thả cảm xúc ngay trên discussion<br>
+      • <strong>@username</strong>: gắn thẻ user GitHub trong nội dung bình luận
     </p>
-
-    <div class="cmt-box" id="cmt-auth">
-      <div class="cmt-row">
-        <input type="text" id="cmt-login" placeholder="Username GitHub (vd: octocat)" maxlength="39" autocomplete="username">
-        <button type="button" class="btn-copy" id="cmt-btn-login">Xác minh &amp; vào</button>
-      </div>
-      <div class="cmt-status" id="cmt-auth-status"></div>
-    </div>
-
-    <div class="cmt-userbar" id="cmt-userbar" style="display:none">
-      <img id="cmt-me-avatar" class="cmt-avatar cmt-avatar-lg" alt="">
-      <span id="cmt-me-label"></span>
-      <button type="button" class="btn-code-copy" id="cmt-btn-logout">Thoát</button>
-    </div>
-
-    <div class="cmt-box" id="cmt-composer" style="display:none">
-      <div class="cmt-preview" id="cmt-mention-preview"></div>
-      <textarea id="cmt-text" placeholder="Viết bình luận… Dùng @username để gắn thẻ"></textarea>
-      <div class="cmt-compose-meta">
-        <div id="cmt-mention-status" class="cmt-status"></div>
-        <button type="button" class="btn-copy" id="cmt-btn-send">Gửi bình luận</button>
-      </div>
-    </div>
-
-    <div class="cmt-list" id="cmt-list"></div>
+    <div id="giscus-container"></div>
   </div>
 
   <a href="notes.html" class="back-link" id="back-link" style="display:none">← Quay lại danh sách ghi chú</a>
@@ -219,6 +167,14 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     viewCooldownMs: 60 * 60 * 1000
   };
 
+  /* Giữ nguyên ID Giscus đã cấu hình — không đổi term format */
+  const GISCUS = {
+    repo: 'tranquanghao708/tranquanghao708.github.io',
+    repoId: 'R_kgDOVeKpJQ',
+    category: 'Announcements',
+    categoryId: 'DIC_kwDOVeKpJc4DKFfr'
+  };
+
   const ALLOWED_MD_HOSTS = new Set(['raw.githubusercontent.com', 'gist.githubusercontent.com']);
   const SAFE_FILE_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,120}\.md$/;
   const ALERT_TYPES = new Set(['note', 'tip', 'important', 'warning', 'caution']);
@@ -237,13 +193,10 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     caution:'<svg viewBox="0 0 16 16"><path d="M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>'
   };
   const ALERT_TITLES = { note:'Note', tip:'Tip', important:'Important', warning:'Warning', caution:'Caution' };
-  const TAG_SVG = '<svg class="cmt-chip-icon" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 2.75A.75.75 0 0 1 2.25 2h5.5a.75.75 0 0 1 .53.22l6 6a.75.75 0 0 1 0 1.06l-5.5 5.5a.75.75 0 0 1-1.06 0l-6-6A.75.75 0 0 1 1.5 8.25Zm2.5 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>';
-  const MENTION_RE = /@([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?)/g;
-  const GH_USER_CACHE = Object.create(null);
 
   function githubSlug(text) {
     return String(text).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/đ/g, 'd').replace(/[^a-z0-9\s._-]/g, '').replace(/[\s._]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      .replace(/đ/g,'d').replace(/[^a-z0-9\s._-]/g,'').replace(/[\s._]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
   }
   function escapeHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -389,7 +342,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       if (el) return el;
     } catch (e) {}
     for (const h of contentEl.querySelectorAll('h1,h2,h3,h4,h5,h6')) {
-      if (githubSlug((h.textContent || '').replace(/\s+/g, ' ').trim()) === slug) return h;
+      if (githubSlug((h.textContent || '').replace(/\s+/g,' ').trim()) === slug) return h;
     }
     return null;
   }
@@ -425,7 +378,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   function copyText(text) {
     if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
     const ta = document.createElement('textarea');
-    ta.value = text; ta.setAttribute('readonly', '');
+    ta.value = text; ta.setAttribute('readonly','');
     ta.style.cssText = 'position:fixed;left:-9999px';
     document.body.appendChild(ta); ta.select();
     try { document.execCommand('copy'); } catch (e) {}
@@ -450,7 +403,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   }
   function enhanceHeadings() {
     contentEl.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(h => {
-      const plain = (h.textContent || '').replace(/\s+/g, ' ').trim();
+      const plain = (h.textContent || '').replace(/\s+/g,' ').trim();
       if (!plain) return;
       const slug = githubSlug(plain);
       if (!h.id) h.id = slug;
@@ -520,286 +473,6 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     box.style.display = 'flex';
   }
 
-  /* ===== GitHub user + comments ===== */
-  function commentsKey() { return 'blog_comments_v1_' + POST_ID; }
-  function sessionKey() { return 'blog_cmt_session_v1'; }
-  function loadComments() {
-    try { return JSON.parse(localStorage.getItem(commentsKey()) || '[]'); } catch (e) { return []; }
-  }
-  function saveComments(list) {
-    try { localStorage.setItem(commentsKey(), JSON.stringify(list)); } catch (e) {}
-  }
-  function getSession() {
-    try { return JSON.parse(localStorage.getItem(sessionKey()) || 'null'); } catch (e) { return null; }
-  }
-  function setSession(user) {
-    if (!user) localStorage.removeItem(sessionKey());
-    else localStorage.setItem(sessionKey(), JSON.stringify(user));
-  }
-  async function fetchGithubUser(login) {
-    const key = String(login || '').trim().toLowerCase();
-    if (!/^[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?$/.test(key)) return null;
-    if (Object.prototype.hasOwnProperty.call(GH_USER_CACHE, key)) return GH_USER_CACHE[key];
-    try {
-      const res = await fetch('https://api.github.com/users/' + encodeURIComponent(key), {
-        headers: { Accept: 'application/vnd.github.v3+json' },
-        cache: 'no-store'
-      });
-      if (res.status === 404) { GH_USER_CACHE[key] = null; return null; }
-      if (!res.ok) throw new Error('api');
-      const u = await res.json();
-      const profile = { login:u.login, name:u.name || u.login, avatar_url:u.avatar_url, html_url:u.html_url };
-      GH_USER_CACHE[key] = profile;
-      return profile;
-    } catch (e) {
-      return undefined;
-    }
-  }
-  function mentionChipHtml(profile) {
-    const login = escapeHtml(profile.login);
-    const name = escapeHtml(profile.name || profile.login);
-    const label = login + (profile.name && profile.name !== profile.login ? '-' + name : '');
-    return `<a class="cmt-chip" href="${escapeHtml(profile.html_url)}" target="_blank" rel="noopener noreferrer">${TAG_SVG}<span>${label}</span><img class="cmt-avatar" src="${escapeHtml(profile.avatar_url)}" alt=""></a>`;
-  }
-  function extractMentions(text) {
-    const set = new Set();
-    const re = new RegExp(MENTION_RE.source, 'g');
-    let m;
-    while ((m = re.exec(String(text))) !== null) set.add(m[1]);
-    return [...set];
-  }
-  async function renderBodyWithMentions(text) {
-    const str = String(text);
-    const parts = [];
-    let last = 0;
-    const re = new RegExp(MENTION_RE.source, 'g');
-    let m;
-    const jobs = [];
-    while ((m = re.exec(str)) !== null) {
-      parts.push({ type:'text', value: str.slice(last, m.index) });
-      parts.push({ type:'mention', login: m[1] });
-      jobs.push(m[1]);
-      last = m.index + m[0].length;
-    }
-    parts.push({ type:'text', value: str.slice(last) });
-    await Promise.all([...new Set(jobs.map(j => j.toLowerCase()))].map(l => fetchGithubUser(l)));
-    return parts.map(p => {
-      if (p.type === 'text') return escapeHtml(p.value);
-      const prof = GH_USER_CACHE[p.login.toLowerCase()];
-      return prof ? mentionChipHtml(prof) : escapeHtml('@' + p.login);
-    }).join('');
-  }
-  async function validateAllMentions(text) {
-    const names = extractMentions(text);
-    const bad = [];
-    for (const n of names) {
-      const u = await fetchGithubUser(n);
-      if (u === null) bad.push(n);
-      if (u === undefined) throw new Error('network');
-    }
-    return bad;
-  }
-
-  function initComments() {
-    const authBox = document.getElementById('cmt-auth');
-    const userBar = document.getElementById('cmt-userbar');
-    const composer = document.getElementById('cmt-composer');
-    const listEl = document.getElementById('cmt-list');
-    const loginInput = document.getElementById('cmt-login');
-    const authStatus = document.getElementById('cmt-auth-status');
-    const textArea = document.getElementById('cmt-text');
-    const mentionStatus = document.getElementById('cmt-mention-status');
-    const mentionPreview = document.getElementById('cmt-mention-preview');
-    const btnSend = document.getElementById('cmt-btn-send');
-    let mentionTimer = null;
-
-    function showSession() {
-      const s = getSession();
-      if (s && s.login) {
-        authBox.style.display = 'none';
-        userBar.style.display = 'flex';
-        composer.style.display = 'block';
-        document.getElementById('cmt-me-avatar').src = s.avatar_url;
-        document.getElementById('cmt-me-label').textContent =
-          s.login + (s.name && s.name !== s.login ? ' · ' + s.name : '');
-      } else {
-        authBox.style.display = 'block';
-        userBar.style.display = 'none';
-        composer.style.display = 'none';
-      }
-    }
-
-    async function refreshList() {
-      const list = loadComments();
-      if (!list.length) {
-        listEl.innerHTML = '<p class="comments-hint">Chưa có bình luận.</p>';
-        return;
-      }
-      const session = getSession();
-      const html = [];
-      for (const c of list) {
-        const body = await renderBodyWithMentions(c.text);
-        const canEdit = session && session.login === c.authorLogin;
-        html.push(`<div class="cmt-item" data-id="${escapeHtml(c.id)}">
-          <div class="cmt-item-head">
-            <a class="author" href="${escapeHtml(c.authorUrl)}" target="_blank" rel="noopener noreferrer">
-              <img class="cmt-avatar cmt-avatar-lg" src="${escapeHtml(c.authorAvatar)}" alt="">
-              ${escapeHtml(c.authorLogin)}${c.authorName && c.authorName !== c.authorLogin ? ' · ' + escapeHtml(c.authorName) : ''}
-            </a>
-            <span>${escapeHtml(c.updatedAt || c.createdAt)}</span>
-          </div>
-          <div class="cmt-item-body">${body}</div>
-          ${canEdit ? `<div class="cmt-item-actions">
-            <button type="button" data-act="edit">Sửa</button>
-            <button type="button" class="danger" data-act="del">Xóa</button>
-          </div>` : ''}
-        </div>`);
-      }
-      listEl.innerHTML = html.join('');
-    }
-
-    document.getElementById('cmt-btn-login').addEventListener('click', async () => {
-      const login = loginInput.value.trim().replace(/^@/, '');
-      authStatus.innerHTML = '<span class="cmt-load"><span class="spinner"></span>Đang kiểm tra GitHub…</span>';
-      const u = await fetchGithubUser(login);
-      if (u === undefined) {
-        authStatus.innerHTML = '<span class="cmt-bad">✕ Lỗi mạng — thử lại</span>';
-        return;
-      }
-      if (!u) {
-        authStatus.innerHTML = '<span class="cmt-bad">✕ Username không tồn tại trên GitHub</span>';
-        return;
-      }
-      setSession(u);
-      authStatus.innerHTML = '<span class="cmt-ok">✓ Xin chào @' + escapeHtml(u.login) + '</span>';
-      showSession();
-      refreshList();
-    });
-
-    document.getElementById('cmt-btn-logout').addEventListener('click', () => {
-      setSession(null);
-      showSession();
-      refreshList();
-    });
-
-    textArea.addEventListener('input', () => {
-      clearTimeout(mentionTimer);
-      mentionStatus.innerHTML = '';
-      mentionPreview.innerHTML = '';
-      btnSend.disabled = false;
-      const names = extractMentions(textArea.value);
-      if (!names.length) return;
-      mentionStatus.innerHTML = '<span class="cmt-load"><span class="spinner"></span>Đang kiểm tra gắn thẻ…</span>';
-      mentionTimer = setTimeout(async () => {
-        const bad = [], good = [];
-        for (const n of names) {
-          const u = await fetchGithubUser(n);
-          if (u === null) bad.push(n);
-          else if (u) good.push(u);
-        }
-        if (bad.length) {
-          mentionStatus.innerHTML = '<span class="cmt-bad">✕ Nickname gắn thẻ không tồn tại: ' +
-            bad.map(b => '@' + escapeHtml(b)).join(', ') + ' — hãy xóa hoặc sửa lại</span>';
-          btnSend.disabled = true;
-        } else {
-          mentionStatus.innerHTML = '<span class="cmt-ok">✓ Gắn thẻ hợp lệ</span>';
-          btnSend.disabled = false;
-          mentionPreview.innerHTML = good.map(mentionChipHtml).join('');
-        }
-      }, 450);
-    });
-
-    btnSend.addEventListener('click', async () => {
-      const session = getSession();
-      if (!session) return;
-      const text = textArea.value.trim();
-      if (!text) return alert('Chưa nhập nội dung.');
-      mentionStatus.innerHTML = '<span class="cmt-load"><span class="spinner"></span>Đang kiểm tra…</span>';
-      let bad;
-      try { bad = await validateAllMentions(text); }
-      catch (e) {
-        mentionStatus.innerHTML = '<span class="cmt-bad">✕ Không kiểm tra được GitHub</span>';
-        return;
-      }
-      if (bad.length) {
-        btnSend.disabled = true;
-        mentionStatus.innerHTML = '<span class="cmt-bad">✕ Nickname gắn thẻ không tồn tại: @' +
-          bad.map(escapeHtml).join(', @') + '</span>';
-        return;
-      }
-      const now = new Date().toLocaleString('vi-VN');
-      const list = loadComments();
-      list.unshift({
-        id: 'c' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-        text,
-        authorLogin: session.login,
-        authorName: session.name,
-        authorAvatar: session.avatar_url,
-        authorUrl: session.html_url,
-        createdAt: now,
-        updatedAt: now
-      });
-      saveComments(list);
-      textArea.value = '';
-      mentionPreview.innerHTML = '';
-      mentionStatus.innerHTML = '';
-      btnSend.disabled = false;
-      refreshList();
-    });
-
-    listEl.addEventListener('click', async (e) => {
-      const btn = e.target.closest('button[data-act]');
-      if (!btn) return;
-      const item = btn.closest('.cmt-item');
-      if (!item) return;
-      const id = item.getAttribute('data-id');
-      const session = getSession();
-      if (!session) return;
-      let list = loadComments();
-      const idx = list.findIndex(c => c.id === id);
-      if (idx < 0 || list[idx].authorLogin !== session.login) return;
-
-      const act = btn.getAttribute('data-act');
-      if (act === 'del') {
-        if (!confirm('Xóa bình luận này?')) return;
-        list.splice(idx, 1);
-        saveComments(list);
-        refreshList();
-        return;
-      }
-      if (act === 'edit') {
-        const body = item.querySelector('.cmt-item-body');
-        const actions = item.querySelector('.cmt-item-actions');
-        if (!body || item.querySelector('.cmt-edit-area')) return;
-        const ta = document.createElement('textarea');
-        ta.className = 'cmt-edit-area';
-        ta.value = list[idx].text;
-        body.style.display = 'none';
-        body.after(ta);
-        actions.innerHTML = '<button type="button" data-act="save">Lưu</button><button type="button" data-act="cancel">Hủy</button>';
-        actions.querySelector('[data-act="cancel"]').onclick = () => refreshList();
-        actions.querySelector('[data-act="save"]').onclick = async () => {
-          const newText = ta.value.trim();
-          if (!newText) return alert('Nội dung trống.');
-          let bad;
-          try { bad = await validateAllMentions(newText); }
-          catch (err) { return alert('Không kiểm tra được GitHub.'); }
-          if (bad.length) return alert('Gắn thẻ không tồn tại: @' + bad.join(', @'));
-          list = loadComments();
-          const i = list.findIndex(c => c.id === id);
-          if (i < 0) return;
-          list[i].text = newText;
-          list[i].updatedAt = new Date().toLocaleString('vi-VN') + ' (đã sửa)';
-          saveComments(list);
-          refreshList();
-        };
-      }
-    });
-
-    showSession();
-    refreshList();
-  }
-
   function initViews() {
     const viewKey = 'views_' + POST_ID;
     const lastKey = 'viewmeta_' + POST_ID;
@@ -809,9 +482,8 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       document.getElementById('view-count').textContent = String(views);
     }
     displayViews();
-
     function getFingerprint() {
-      const raw = [navigator.userAgent, navigator.language, screen.width + 'x' + screen.height, screen.colorDepth, new Date().getTimezoneOffset()].join('|');
+      const raw = [navigator.userAgent, navigator.language, screen.width+'x'+screen.height, screen.colorDepth, new Date().getTimezoneOffset()].join('|');
       let hash = 0;
       for (let i = 0; i < raw.length; i++) { hash = ((hash << 5) - hash) + raw.charCodeAt(i); hash |= 0; }
       return 'fp_' + Math.abs(hash);
@@ -820,24 +492,21 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       try {
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 4000);
-        const res = await fetch('https://api.ipify.org?format=json', { signal: ctrl.signal, cache: 'no-store' });
+        const res = await fetch('https://api.ipify.org?format=json', { signal:ctrl.signal, cache:'no-store' });
         clearTimeout(t);
         if (!res.ok) return 'unknown';
         const data = await res.json();
         return (data && data.ip) ? String(data.ip) : 'unknown';
       } catch (e) { return 'unknown'; }
     }
-
     const fp = getFingerprint();
-    let cancelled = false;
-    let dwellTimer = null;
+    let cancelled = false, dwellTimer = null;
     function clearDwell() {
       cancelled = true;
       if (dwellTimer) { clearTimeout(dwellTimer); dwellTimer = null; }
     }
     window.addEventListener('pagehide', clearDwell);
     window.addEventListener('beforeunload', clearDwell);
-
     async function tryCountView() {
       if (cancelled) return;
       let meta = {};
@@ -857,11 +526,42 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       views += 1;
       try {
         localStorage.setItem(viewKey, String(views));
-        localStorage.setItem(lastKey, JSON.stringify({ ts: Date.now(), fp, ip }));
+        localStorage.setItem(lastKey, JSON.stringify({ ts:Date.now(), fp, ip }));
       } catch (e) {}
       displayViews();
     }
     dwellTimer = setTimeout(() => { if (!cancelled) tryCountView(); }, CONFIG.viewDwellMs);
+  }
+
+  /**
+   * Giscus — bình luận public toàn cầu (GitHub Discussions)
+   * term = tên file ?file=... (ổn định, không hardcode từng bài)
+   * Sửa/xóa: đăng nhập GitHub trong widget → Edit/Delete comment của mình
+   */
+  function loadGiscus() {
+    const container = document.getElementById('giscus-container');
+    if (!container) return;
+    container.innerHTML = '';
+    const term = file ? file : (url ? 'external:' + url.slice(0, 180) : 'general');
+    const script = document.createElement('script');
+    script.src = 'https://giscus.app/client.js';
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    script.setAttribute('data-repo', GISCUS.repo);
+    script.setAttribute('data-repo-id', GISCUS.repoId);
+    script.setAttribute('data-category', GISCUS.category);
+    script.setAttribute('data-category-id', GISCUS.categoryId);
+    script.setAttribute('data-mapping', 'specific');
+    script.setAttribute('data-term', term);
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'top');
+    script.setAttribute('data-theme', 'dark');
+    script.setAttribute('data-lang', 'vi');
+    script.setAttribute('data-loading', 'lazy');
+    container.appendChild(script);
+    console.info('[giscus] term =', term);
   }
 
   async function loadMarkdown() {
@@ -925,7 +625,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       ensureScrollToHash();
       updateReadProgress();
       initViews();
-      initComments();
+      loadGiscus();
     } catch (err) {
       showError(err?.name === 'AbortError' ? 'Timeout' : (err?.message || 'Lỗi tải'));
       console.error(err);
