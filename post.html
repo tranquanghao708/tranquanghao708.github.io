@@ -101,7 +101,6 @@
         .markdown-body table tr:nth-child(2n) { background: #161b22; }
         .markdown-body table th { font-weight: 600; background: #161b22; }
 
-        /* details */
         .markdown-body details {
             background: #161b22; border: 1px solid #30363d;
             border-radius: 6px; padding: 0.6rem 1rem; margin: 1rem 0;
@@ -109,7 +108,6 @@
         .markdown-body details summary { cursor: pointer; font-weight: 600; color: #e6edf3; }
         .markdown-body details[open] summary { margin-bottom: 0.6rem; }
 
-        /* kbd */
         .markdown-body kbd {
             background: #161b22; border: 1px solid #30363d;
             border-bottom-color: #21262d; border-radius: 6px;
@@ -129,76 +127,35 @@
             font-family: var(--font-mono); font-size: 0.82rem;
             color: var(--text-dim); margin-bottom: 1.5rem;
         }
-        .engagement {
-            margin: 2.8rem 0 1.5rem;
-            padding: 1.2rem 0;
+
+        /* Views (chỉ đếm local, chống F5) */
+        .views-bar {
+            margin: 2.2rem 0 1rem;
+            padding-top: 1.2rem;
             border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-dim);
         }
-        .views {
-            font-family: var(--font-mono); font-size: 0.85rem;
-            color: var(--text-dim); margin-bottom: 1rem;
+
+        /* Giscus container */
+        .comments-wrap {
+            margin-top: 2.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
         }
-        .reactions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-        .reaction-btn {
-            display: inline-flex; align-items: center; gap: 0.35rem;
-            background: #1c2128; border: 1px solid var(--border);
-            border-radius: 999px; padding: 0.35rem 0.75rem;
-            font-size: 0.88rem; color: var(--text-muted);
-            cursor: pointer; transition: all 0.15s; user-select: none;
+        .comments-wrap h2 {
+            font-size: 1.15rem;
+            color: #fff;
+            margin-bottom: 1rem;
         }
-        .reaction-btn:hover { border-color: var(--accent); color: var(--text); }
-        .reaction-btn.active {
-            border-color: var(--accent); background: #388bfd22; color: var(--accent);
+        .comments-hint {
+            font-size: 0.88rem;
+            color: var(--text-dim);
+            margin-bottom: 1.2rem;
         }
-        .comments-section { margin-top: 2.5rem; }
-        .comments-section h2 {
-            font-size: 1.15rem; color: #fff; margin-bottom: 1.2rem;
-        }
-        .comments-section h2 span {
-            font-family: var(--font-mono); font-size: 0.85rem;
-            color: var(--text-dim); font-weight: 400;
-        }
-        .comment-form {
-            background: #1c2128; border: 1px solid var(--border);
-            border-radius: var(--radius); padding: 1.15rem; margin-bottom: 1.8rem;
-        }
-        .comment-form textarea {
-            width: 100%; min-height: 90px; resize: vertical;
-            background: var(--bg); border: 1px solid var(--border);
-            border-radius: 6px; padding: 0.75rem 0.9rem;
-            color: var(--text); font-size: 0.95rem; margin-bottom: 0.8rem; outline: none;
-        }
-        .comment-form textarea:focus { border-color: var(--accent); }
-        .form-row { display: flex; flex-wrap: wrap; gap: 0.7rem; align-items: center; }
-        .comment-form input[type="text"] {
-            flex: 1; min-width: 140px;
-            background: var(--bg); border: 1px solid var(--border);
-            border-radius: 6px; padding: 0.5rem 0.8rem;
-            color: var(--text); font-size: 0.9rem; outline: none;
-        }
-        .submit-btn {
-            background: var(--accent); color: #0d1117; border: none;
-            border-radius: 6px; padding: 0.5rem 1.1rem;
-            font-family: var(--font-mono); font-size: 0.88rem; font-weight: 600;
-            cursor: pointer;
-        }
-        .comment-list { display: grid; gap: 1rem; }
-        .comment {
-            background: #161b22; border: 1px solid var(--border);
-            border-radius: var(--radius); padding: 1rem 1.15rem;
-        }
-        .comment-header {
-            display: flex; justify-content: space-between; margin-bottom: 0.4rem;
-            flex-wrap: wrap; gap: 0.4rem;
-        }
-        .comment-author { font-family: var(--font-mono); font-size: 0.88rem; color: var(--accent); }
-        .comment-time { font-size: 0.78rem; color: var(--text-dim); }
-        .comment-body { font-size: 0.95rem; color: var(--text-muted); white-space: pre-wrap; }
-        .no-comments {
-            text-align: center; padding: 2rem; color: var(--text-dim);
-            border: 1px dashed var(--border); border-radius: var(--radius);
-        }
+        .comments-hint a { color: var(--accent); }
+
         .back-link {
             display: inline-block; margin-top: 2.5rem;
             font-family: var(--font-mono); font-size: 0.88rem;
@@ -209,6 +166,11 @@
             margin-top: 3rem; padding-top: 1.5rem;
             border-top: 1px solid var(--border);
             font-size: 0.84rem; color: var(--text-dim);
+        }
+
+        /* Giscus dark blend */
+        .giscus, .giscus-frame {
+            color-scheme: dark;
         }
     </style>
 </head>
@@ -223,34 +185,30 @@
             </ul>
         </nav>
     </div>
+
     <div id="status" class="status">Đang tải bài viết…</div>
+
     <article id="article" style="display:none">
         <div class="post-meta" id="post-meta"></div>
         <div id="content" class="markdown-body"></div>
     </article>
-    <div class="engagement" id="engagement" style="display:none">
-        <div class="views" id="view-count">👁 <span>0</span> lượt xem</div>
-        <div class="reactions" id="reactions">
-            <button class="reaction-btn" data-type="like">👍 <span class="count">0</span></button>
-            <button class="reaction-btn" data-type="clap">👏 <span class="count">0</span></button>
-            <button class="reaction-btn" data-type="wow">😮 <span class="count">0</span></button>
-            <button class="reaction-btn" data-type="think">🤔 <span class="count">0</span></button>
-            <button class="reaction-btn" data-type="angry">😡 <span class="count">0</span></button>
-        </div>
+
+    <!-- View count (local, chống spam F5) -->
+    <div class="views-bar" id="views-bar" style="display:none">
+        👁 <span id="view-count">0</span> lượt xem (trên trình duyệt này, chống F5 spam)
     </div>
-    <section class="comments-section" id="comments-section" style="display:none">
-        <h2>Bình luận <span id="comment-count">(0)</span></h2>
-        <div class="comment-form">
-            <textarea id="comment-text" placeholder="Viết bình luận… (lưu trên trình duyệt này)"></textarea>
-            <div class="form-row">
-                <input type="text" id="comment-name" placeholder="Tên hiển thị (tùy chọn)" maxlength="40">
-                <button class="submit-btn" id="submit-comment">Gửi bình luận</button>
-            </div>
-        </div>
-        <div class="comment-list" id="comment-list">
-            <div class="no-comments" id="no-comments">Chưa có bình luận nào.</div>
-        </div>
-    </section>
+
+    <!-- Bình luận + cảm xúc PUBLIC qua Giscus -->
+    <div class="comments-wrap" id="comments-wrap" style="display:none">
+        <h2>Bình luận & cảm xúc</h2>
+        <p class="comments-hint">
+            Bình luận và reaction dùng <strong>GitHub Discussions</strong> (Giscus) —
+            mọi người đều thấy, bạn đọc/trả lời ngay trên GitHub.
+            Cần đăng nhập GitHub để bình luận.
+        </p>
+        <div id="giscus-container"></div>
+    </div>
+
     <a href="notes.html" class="back-link" id="back-link" style="display:none">← Quay lại danh sách ghi chú</a>
     <footer id="footer" style="display:none">
         <p>© 2026 tranquanghao708 · Ghi chú đang học</p>
@@ -261,14 +219,30 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
 <script>
 (function () {
-    // ========== CẤU HÌNH ==========
+    // ========== CẤU HÌNH REPO ==========
     const CONFIG = {
         owner: 'tranquanghao708',
-        repo: 'tranquanghao708.github.io',   // ← đổi nếu repo khác
+        repo: 'tranquanghao708.github.io',   // ← sửa đúng repo
         branch: 'main'
     };
 
-    // ========== Slug giống GitHub (hỗ trợ tiếng Việt) ==========
+    // ========== CẤU HÌNH GISCUS (lấy từ https://giscus.app) ==========
+    const GISCUS = {
+        repo: 'tranquanghao708/tranquanghao708.github.io',  // owner/repo
+        repoId: 'R_xxxxxxxx',          // ← PASTE data-repo-id từ giscus.app
+        category: 'Announcements',     // ← hoặc category bạn tạo (Blog / Comments)
+        categoryId: 'DIC_xxxxxxxx',    // ← PASTE data-category-id từ giscus.app
+        mapping: 'pathname',           // mỗi trang 1 discussion theo đường dẫn
+        strict: '0',
+        reactionsEnabled: '1',         // bật reaction (👍 ❤️ 😂 …) của GitHub
+        emitMetadata: '0',
+        inputPosition: 'top',
+        theme: 'dark',
+        lang: 'vi',
+        loading: 'lazy'
+    };
+
+    // ========== Slug GitHub-like ==========
     function githubSlug(text) {
         return text.toString().trim().toLowerCase()
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -343,7 +317,6 @@ ${bodyHtml}
                 mdText = await res.text();
                 sourceLabel = 'Nguồn ngoài';
             } else if (file) {
-                // Lấy info mới nhất từ GitHub API để chống cache
                 const apiUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/posts/${encodeURIComponent(file)}?ref=${CONFIG.branch}`;
                 let downloadUrl = `posts/${file}`;
                 let version = Date.now();
@@ -380,8 +353,8 @@ ${bodyHtml}
             document.getElementById('post-meta').textContent = `Nguồn: ${sourceLabel} · đang học`;
             statusEl.style.display = 'none';
             articleEl.style.display = 'block';
-            document.getElementById('engagement').style.display = 'block';
-            document.getElementById('comments-section').style.display = 'block';
+            document.getElementById('views-bar').style.display = 'block';
+            document.getElementById('comments-wrap').style.display = 'block';
             document.getElementById('back-link').style.display = 'inline-block';
             document.getElementById('footer').style.display = 'block';
 
@@ -393,8 +366,8 @@ ${bodyHtml}
                 if (target) setTimeout(() => target.scrollIntoView({ behavior: 'smooth' }), 120);
             }
 
-            initEngagement();
-            initComments();
+            initViews();
+            loadGiscus();
         } catch (err) {
             statusEl.className = 'status error';
             statusEl.textContent = 'Lỗi: ' + err.message;
@@ -402,20 +375,18 @@ ${bodyHtml}
         }
     }
 
-    // ========== Views (chống F5 spam) + Reactions ==========
-    function initEngagement() {
+    // ========== View count (local + chống F5) ==========
+    function initViews() {
         const viewKey = `views_${POST_ID}`;
         const lastViewKey = `lastview_${POST_ID}`;
         const fingerprintKey = `fp_${POST_ID}`;
-        const COOLDOWN_MS = 12 * 60 * 60 * 1000; // 12 giờ
+        const COOLDOWN_MS = 12 * 60 * 60 * 1000;
 
         function getFingerprint() {
             const raw = [
-                navigator.userAgent,
-                navigator.language,
+                navigator.userAgent, navigator.language,
                 screen.width + 'x' + screen.height,
-                screen.colorDepth,
-                new Date().getTimezoneOffset()
+                screen.colorDepth, new Date().getTimezoneOffset()
             ].join('|');
             let hash = 0;
             for (let i = 0; i < raw.length; i++) {
@@ -431,94 +402,43 @@ ${bodyHtml}
         const lastView = parseInt(localStorage.getItem(lastViewKey) || '0', 10);
         const lastFp = localStorage.getItem(fingerprintKey);
 
-        const shouldCount = (lastFp !== fp) || (now - lastView > COOLDOWN_MS);
-        if (shouldCount) {
+        if ((lastFp !== fp) || (now - lastView > COOLDOWN_MS)) {
             views += 1;
             localStorage.setItem(viewKey, views);
             localStorage.setItem(lastViewKey, now);
             localStorage.setItem(fingerprintKey, fp);
         }
-        document.querySelector('#view-count span').textContent = views;
-
-        // Reactions
-        const reactKey = `react_${POST_ID}`;
-        const reactedKey = `reacted_${POST_ID}`;
-        let reactions = JSON.parse(localStorage.getItem(reactKey) || '{"like":0,"clap":0,"wow":0,"think":0,"angry":0}');
-        let myReaction = localStorage.getItem(reactedKey) || null;
-
-        function renderReactions() {
-            document.querySelectorAll('.reaction-btn').forEach(btn => {
-                const type = btn.dataset.type;
-                btn.querySelector('.count').textContent = reactions[type] || 0;
-                btn.classList.toggle('active', myReaction === type);
-            });
-        }
-        renderReactions();
-
-        document.getElementById('reactions').addEventListener('click', e => {
-            const btn = e.target.closest('.reaction-btn');
-            if (!btn) return;
-            const type = btn.dataset.type;
-            if (myReaction === type) {
-                reactions[type] = Math.max(0, (reactions[type] || 0) - 1);
-                myReaction = null;
-                localStorage.removeItem(reactedKey);
-            } else {
-                if (myReaction) reactions[myReaction] = Math.max(0, (reactions[myReaction] || 0) - 1);
-                reactions[type] = (reactions[type] || 0) + 1;
-                myReaction = type;
-                localStorage.setItem(reactedKey, type);
-            }
-            localStorage.setItem(reactKey, JSON.stringify(reactions));
-            renderReactions();
-        });
+        document.getElementById('view-count').textContent = views;
     }
 
-    function initComments() {
-        const commentKey = `comments_${POST_ID}`;
-        let comments = JSON.parse(localStorage.getItem(commentKey) || '[]');
+    // ========== Giscus (bình luận + reaction PUBLIC) ==========
+    function loadGiscus() {
+        const container = document.getElementById('giscus-container');
+        container.innerHTML = ''; // clear nếu reload
 
-        function escapeHtml(str) {
-            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-                      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-        }
+        const script = document.createElement('script');
+        script.src = 'https://giscus.app/client.js';
+        script.async = true;
+        script.crossOrigin = 'anonymous';
 
-        function renderComments() {
-            const list = document.getElementById('comment-list');
-            const noCmt = document.getElementById('no-comments');
-            document.getElementById('comment-count').textContent = `(${comments.length})`;
-            if (comments.length === 0) {
-                list.innerHTML = '';
-                list.appendChild(noCmt);
-                noCmt.style.display = 'block';
-                return;
-            }
-            noCmt.style.display = 'none';
-            list.innerHTML = comments.map(c => `
-                <div class="comment">
-                    <div class="comment-header">
-                        <span class="comment-author">${escapeHtml(c.name || 'Ẩn danh')}</span>
-                        <span class="comment-time">${c.time}</span>
-                    </div>
-                    <div class="comment-body">${escapeHtml(c.text)}</div>
-                </div>
-            `).join('');
-        }
+        script.setAttribute('data-repo', GISCUS.repo);
+        script.setAttribute('data-repo-id', GISCUS.repoId);
+        script.setAttribute('data-category', GISCUS.category);
+        script.setAttribute('data-category-id', GISCUS.categoryId);
+        script.setAttribute('data-mapping', GISCUS.mapping);
+        script.setAttribute('data-strict', GISCUS.strict);
+        script.setAttribute('data-reactions-enabled', GISCUS.reactionsEnabled);
+        script.setAttribute('data-emit-metadata', GISCUS.emitMetadata);
+        script.setAttribute('data-input-position', GISCUS.inputPosition);
+        script.setAttribute('data-theme', GISCUS.theme);
+        script.setAttribute('data-lang', GISCUS.lang);
+        script.setAttribute('data-loading', GISCUS.loading);
 
-        document.getElementById('submit-comment').addEventListener('click', () => {
-            const text = document.getElementById('comment-text').value.trim();
-            const name = document.getElementById('comment-name').value.trim();
-            if (!text) return alert('Bạn chưa nhập nội dung.');
-            const timeStr = new Date().toLocaleString('vi-VN', {
-                day:'2-digit', month:'2-digit', year:'numeric',
-                hour:'2-digit', minute:'2-digit'
-            });
-            comments.unshift({ name, text, time: timeStr });
-            localStorage.setItem(commentKey, JSON.stringify(comments));
-            document.getElementById('comment-text').value = '';
-            renderComments();
-        });
-        renderComments();
+        // Quan trọng: mỗi bài 1 discussion riêng theo file
+        // Dùng pathname + query để tách bài (post.html?file=xxx.md)
+        script.setAttribute('data-term', location.pathname + location.search);
+
+        container.appendChild(script);
     }
 
     loadMarkdown();
