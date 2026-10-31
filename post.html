@@ -12,8 +12,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.8.1/github-markdown-dark.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css">
-<style>
-:root{--bg:#0d1117;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--dim:#6e7681;--accent:#58a6ff;--code-bg:rgba(110,118,129,.4);--ok:#3fb950;--bad:#f85149;
+<style>:root{--bg:#0d1117;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--dim:#6e7681;--accent:#58a6ff;--code-bg:rgba(110,118,129,.4);--ok:#3fb950;--bad:#f85149;
 --font-mono:"SFMono-Regular","Cascadia Code","Fira Code",Consolas,Menlo,monospace;
 --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;--radius:8px}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -108,6 +107,31 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
 .share-row input{min-width:0;width:100%}
 .btn-copy{min-height:38px}
 .heading-anchor{display:none}}
+.related{margin:2.2rem 0 1.5rem}
+.related-head{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin-bottom:1rem}
+.related-head h2{font-size:1.15rem;color:#fff}
+.related-head h2::before{content:"// ";color:var(--ok);font-family:var(--font-mono)}
+.related-head a{font-family:var(--font-mono);font-size:.8rem;color:var(--accent);text-decoration:none;white-space:nowrap}
+.related-head a:hover{text-decoration:underline}
+.related-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.9rem}
+.rel-card{position:relative;display:flex;flex-direction:column;gap:.5rem;padding:1rem 1.05rem;background:linear-gradient(180deg,#161b22,#12171e);border:1px solid var(--border);border-radius:10px;text-decoration:none;color:inherit;overflow:hidden;opacity:0;transform:translateY(8px);animation:relIn .5s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:calc(var(--i,0)*90ms);transition:border-color .2s,transform .2s,box-shadow .2s}
+.rel-card::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;transition:opacity .25s}
+.rel-card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.35),0 0 0 1px rgba(88,166,255,.15)}
+.rel-card:hover::before{opacity:1}
+.rel-meta{display:flex;justify-content:space-between;gap:.6rem;font-family:var(--font-mono);font-size:.7rem;color:var(--dim)}
+.rel-meta span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.rel-meta span:last-child{white-space:nowrap}
+.rel-title{font-size:1rem;font-weight:600;color:#fff;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.rel-excerpt{font-size:.84rem;color:var(--muted);line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;flex:1;overflow-wrap:anywhere}
+.rel-foot{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;justify-content:space-between;margin-top:.2rem}
+.rel-tags{display:flex;gap:.3rem;flex-wrap:wrap}
+.rel-tags .post-tag{font-size:.66rem;padding:.1rem .5rem}
+.rel-go{font-family:var(--font-mono);font-size:.76rem;color:var(--accent);transition:transform .2s}
+.rel-card:hover .rel-go{transform:translateX(4px)}
+.rel-skel{height:158px;border-radius:10px;border:1px solid var(--border);background:linear-gradient(100deg,#161b22 30%,#1c232c 50%,#161b22 70%);background-size:200% 100%;animation:shimmer 1.3s linear infinite}
+@keyframes relIn{to{opacity:1;transform:none}}
+@keyframes shimmer{to{background-position:-200% 0}}
+@media(max-width:760px){.related-grid{grid-template-columns:1fr}.rel-skel{height:110px}}
 </style>
 </head>
 <body>
@@ -154,6 +178,14 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       <button type="button" class="btn-copy" id="btn-copy-section">Copy link mục</button>
     </div>
   </div>
+
+  <section class="related" id="related" aria-labelledby="related-title" hidden>
+    <div class="related-head">
+      <h2 id="related-title">Đọc tiếp</h2>
+      <a href="notes.html">Tất cả ghi chú →</a>
+    </div>
+    <div class="related-grid" id="related-grid" aria-live="polite"></div>
+  </section>
 
   <div class="comments-wrap" id="comments-wrap" hidden>
     <h2>Bình luận &amp; cảm xúc</h2>
@@ -692,10 +724,137 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     setTimeout(fallback, 15000);
   }
 
+  /* ---------- Bài viết gợi ý (Đọc tiếp) ---------- */
+  function initRelated() {
+    const box = $('related'), grid = $('related-grid');
+    if (!box || !grid) return;
+    const WANT = 3, LIST_KEY = 'posts_list_v1', LIST_TTL = 10 * 60 * 1000, MAX_SUMMARY_BYTES = 512 * 1024;
+    let started = false;
+    const ss = {
+      get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+      set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
+    };
+    const safeRaw = u => {
+      try { const x = new URL(u); return x.protocol === 'https:' && x.hostname === 'raw.githubusercontent.com' ? x.href : ''; }
+      catch (e) { return ''; }
+    };
+    const titleFromName = n => n.replace(/\.md$/i, '').replace(/[-_]+/g, ' ').replace(/(^|\s)\S/g, c => c.toUpperCase());
+    const plainText = md => String(md)
+      .replace(/```[\s\S]*?```/g, ' ').replace(/\$\$[\s\S]*?\$\$/g, ' ')
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+      .replace(/<[^>]+>/g, ' ').replace(/[`*_~>#|]/g, '').replace(/\s+/g, ' ').trim();
+
+    function showSkeleton() {
+      grid.textContent = '';
+      for (let i = 0; i < WANT; i++) {
+        const d = document.createElement('div');
+        d.className = 'rel-skel';
+        grid.appendChild(d);
+      }
+      box.hidden = false;
+    }
+    async function getList() {
+      try {
+        const c = JSON.parse(ss.get(LIST_KEY) || 'null');
+        if (c && Date.now() - c.t < LIST_TTL && Array.isArray(c.items)) return c.items;
+      } catch (e) {}
+      const res = await fetchWithTimeout('https://api.github.com/repos/' + CONFIG.owner + '/' + CONFIG.repo +
+        '/contents/posts?ref=' + CONFIG.branch, { headers: { Accept: 'application/vnd.github+json' } }, 10000);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const items = (Array.isArray(data) ? data : [])
+        .filter(f => f && f.type === 'file' && typeof f.name === 'string' && SAFE_FILE_RE.test(f.name))
+        .map(f => ({ name: f.name, size: f.size | 0, dl: safeRaw(f.download_url) }))
+        .sort((a, b) => b.name.localeCompare(a.name));
+      ss.set(LIST_KEY, JSON.stringify({ t: Date.now(), items }));
+      return items;
+    }
+    // Lấy 3 bài kế tiếp theo vòng tròn: ổn định, không trùng, không gồm bài đang đọc.
+    function pick(items) {
+      const idx = items.findIndex(p => p.name === file);
+      if (idx < 0) return items.slice(0, WANT);
+      const out = [];
+      for (let k = 1; k < items.length && out.length < WANT; k++) out.push(items[(idx + k) % items.length]);
+      return out;
+    }
+    async function summarize(p) {
+      const info = { name: p.name, title: titleFromName(p.name), excerpt: '', tags: [], mins: Math.max(1, Math.round(p.size / 1100)) };
+      try {
+        const res = await fetchWithTimeout(p.dl || ('posts/' + encodeURIComponent(p.name)), {}, 8000);
+        if (!res.ok) return info;
+        if (parseInt(res.headers.get('content-length') || '0', 10) > MAX_SUMMARY_BYTES) return info;
+        const text = await res.text();
+        if (text.length > MAX_SUMMARY_BYTES) return info;
+        const { meta, body } = parseFrontmatter(text);
+        const h1 = body.match(/^#\s+(.+?)\s*#*\s*$/m);
+        const t = plainText(meta.title || (h1 && h1[1]) || '').slice(0, 120);
+        if (t) info.title = t;
+        const para = body.split(/\n\s*\n/).map(x => x.trim())
+          .find(x => x && !/^(#|```|\||>|[-*+]\s|\d+\.\s|!\[|<|\$\$)/.test(x));
+        if (para) {
+          const ex = plainText(para);
+          info.excerpt = ex.length > 150 ? ex.slice(0, 147).trimEnd() + '…' : ex;
+        }
+        let tags = meta.tags || meta.tag || [];
+        if (typeof tags === 'string') tags = tags.split(',').map(x => x.trim());
+        if (Array.isArray(tags)) info.tags = tags.filter(Boolean).slice(0, 3).map(x => String(x).slice(0, 24));
+        info.mins = Math.max(1, Math.round(body.trim().split(/\s+/).length / 200));
+      } catch (e) { /* giữ thông tin dự phòng từ tên file */ }
+      return info;
+    }
+    function el(tag, cls, text) {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text != null) n.textContent = text;
+      return n;
+    }
+    function card(info, i) {
+      const a = el('a', 'rel-card');
+      const u = new URL(location.pathname, location.origin);
+      u.searchParams.set('file', info.name);
+      a.href = u.pathname + u.search;
+      a.style.setProperty('--i', i);
+      a.setAttribute('aria-label', 'Đọc bài: ' + info.title);
+      const meta = el('div', 'rel-meta');
+      meta.append(el('span', '', info.name), el('span', '', '~' + info.mins + ' phút'));
+      a.append(meta, el('div', 'rel-title', info.title));
+      if (info.excerpt) a.append(el('p', 'rel-excerpt', info.excerpt));
+      const foot = el('div', 'rel-foot');
+      const tags = el('div', 'rel-tags');
+      info.tags.forEach(t => tags.append(el('span', 'post-tag', t)));
+      foot.append(tags, el('span', 'rel-go', 'Đọc tiếp →'));
+      a.append(foot);
+      return a;
+    }
+    async function run() {
+      if (started) return;
+      started = true;
+      showSkeleton();
+      try {
+        const chosen = pick(await getList());
+        if (!chosen.length) { box.hidden = true; return; }
+        const infos = await Promise.all(chosen.map(summarize));
+        grid.textContent = '';
+        infos.forEach((inf, i) => grid.appendChild(card(inf, i)));
+      } catch (e) {
+        console.warn('[related]', e);
+        box.hidden = true; // lỗi thì ẩn êm, không làm hỏng trang
+      }
+    }
+    // Chỉ tải khi người đọc gần cuối bài (tiết kiệm request / rate limit).
+    const sentinel = $('share-tools');
+    if ('IntersectionObserver' in window && sentinel) {
+      const io = new IntersectionObserver(es => {
+        if (es.some(e => e.isIntersecting)) { io.disconnect(); run(); }
+      }, { rootMargin: '800px 0px' });
+      io.observe(sentinel);
+    } else run();
+  }
+
   /* ---------- Tải bài ---------- */
-  async function fetchWithTimeout(resource, options) {
+  async function fetchWithTimeout(resource, options, ms) {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), CONFIG.fetchTimeoutMs);
+    const timer = setTimeout(() => ctrl.abort(), ms || CONFIG.fetchTimeoutMs);
     try {
       return await fetch(resource, Object.assign({}, options, { signal: ctrl.signal, cache: 'no-store', credentials: 'omit' }));
     } finally { clearTimeout(timer); }
@@ -768,6 +927,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       updateReadProgress();
       initViews();
       loadGiscus();
+      initRelated();
     } catch (err) {
       showError(err && err.name === 'AbortError' ? 'Hết thời gian chờ (timeout).' : (err && err.message) || 'Lỗi tải');
       console.error(err);
