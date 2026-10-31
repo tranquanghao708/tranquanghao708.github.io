@@ -323,52 +323,94 @@
     </footer>
 </div>
 
-<!-- Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
 
 <script>
 (function () {
-    // ========== Cấu hình marked ==========
-    marked.setOptions({
-        highlight: function (code, lang) {
-            if (lang && hljs.getLanguage(lang)) {
-                return hljs.highlight(code, { language: lang }).value;
-            }
-            return hljs.highlightAuto(code).value;
-        },
-        breaks: true,
-        gfm: true
-    });
-
-    // ========== Xử lý GitHub Alerts (> [!NOTE] ...) ==========
-    function processAlerts(html) {
-        // Chuyển các blockquote có [!TYPE] thành alert đẹp
-        return html.replace(
-            /<blockquote>\s*<p>\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*<\/p>/gi,
-            function (_, type) {
-                type = type.toLowerCase();
-                const titles = {
-                    note: 'Note', tip: 'Tip', important: 'Important',
-                    warning: 'Warning', caution: 'Caution'
-                };
-                const icons = {
-                    note: 'ℹ️', tip: '💡', important: '❗',
-                    warning: '⚠️', caution: '🚨'
-                };
-                return `<div class="markdown-alert markdown-alert-${type}">
-                    <p class="markdown-alert-title">${icons[type]} ${titles[type]}</p>`;
-            }
-        ).replace(/<\/blockquote>/g, '</div>');
+    // ========== GitHub-like heading slug (hỗ trợ tiếng Việt) ==========
+    function githubSlug(text) {
+        return text
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')                   // tách dấu
+            .replace(/[\u0300-\u036f]/g, '')    // bỏ dấu
+            .replace(/đ/g, 'd')
+            .replace(/[^a-z0-9\s-]/g, '')      // chỉ giữ chữ số, khoảng trắng, -
+            .replace(/\s+/g, '-')               // space → -
+            .replace(/-+/g, '-')                // gộp nhiều -
+            .replace(/^-|-$/g, '');
     }
 
-    // ========== Lấy tham số ==========
+    // ========== Icons cho alerts (SVG giống GitHub) ==========
+    const ALERT_ICONS = {
+        note: `<svg viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>`,
+        tip: `<svg viewBox="0 0 16 16"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.10.10.0.2.192.168.1.4.36.67.576 1.022.24.393.425.747.425 1.171v1a.75.75 0 0 0 1.5 0v-1c0-.616-.262-1.14-.524-1.57a5.65 5.65 0 0 0-.597-1.048 8.861 8.861 0 0 0-.46-.558l-.214-.253C5.924 6.125 5.5 5.734 5.5 5.25 5.5 3.81 6.637 2.999 8 3c1.363 0 2.5.81 2.5 2.25 0 .484-.424.875-.984 1.496l-.214.253c-.145.172-.29.365-.46.558a5.65 5.65 0 0 0-.597 1.048c-.262.43-.524.954-.524 1.57v1a.75.75 0 0 0 1.5 0v-1c0-.424.185-.778.425-1.171a8.15 8.15 0 0 1 .576-1.022c.16-.246.32-.49.46-.732.145-.242.29-.485.46-.732l.214-.253C11.576 6.125 12 5.734 12 5.25c0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"/></svg>`,
+        important: `<svg viewBox="0 0 16 16"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .172.16.0.3.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/></svg>`,
+        warning: `<svg viewBox="0 0 16 16"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/></svg>`,
+        caution: `<svg viewBox="0 0 16 16"><path d="M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>`
+    };
+
+    const ALERT_TITLES = {
+        note: 'Note',
+        tip: 'Tip',
+        important: 'Important',
+        warning: 'Warning',
+        caution: 'Caution'
+    };
+
+    // ========== Pre-process alerts (xử lý tốt nội dung nhiều dòng) ==========
+    function preprocessAlerts(md) {
+        // Khớp > [!TYPE] rồi các dòng tiếp theo bắt đầu bằng >
+        return md.replace(
+            /^> \[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*\n((?:^>.*\n?)*)/gmi,
+            (match, type, body) => {
+                type = type.toLowerCase();
+                // Bỏ dấu > ở đầu mỗi dòng
+                const cleaned = body.replace(/^>[ \t]?/gm, '').trimEnd();
+                // Render phần thân bằng marked (để hỗ trợ list, code, link bên trong alert)
+                const bodyHtml = marked.parse(cleaned, { async: false });
+                return `\n\n<div class="markdown-alert markdown-alert-${type}" data-alert="${type}">
+<p class="markdown-alert-title">${ALERT_ICONS[type] || ''} ${ALERT_TITLES[type]}</p>
+${bodyHtml}
+</div>\n\n`;
+            }
+        );
+    }
+
+    // ========== Cấu hình marked ==========
+    const renderer = new marked.Renderer();
+
+    // Heading có id giống GitHub → anchor link hoạt động
+    renderer.heading = function ({ text, depth }) {
+        const plain = text.replace(/<[^>]+>/g, ''); // bỏ thẻ html nếu có
+        const id = githubSlug(plain);
+        return `<h${depth} id="${id}">${text}</h${depth}>\n`;
+    };
+
+    marked.setOptions({
+        renderer,
+        gfm: true,
+        breaks: false,          // giống GitHub hơn (cần 2 space hoặc empty line)
+        pedantic: false,
+        highlight: function (code, lang) {
+            if (lang && hljs.getLanguage(lang)) {
+                try {
+                    return hljs.highlight(code, { language: lang }).value;
+                } catch (e) {}
+            }
+            return hljs.highlightAuto(code).value;
+        }
+    });
+
+    // ========== Load bài viết ==========
     const params = new URLSearchParams(location.search);
-    const file = params.get('file');          // posts/xxx.md
-    const url  = params.get('url');           // raw.githubusercontent.com/...
+    const file = params.get('file');
+    const url  = params.get('url');
     const POST_ID = file || url || 'unknown';
 
-    const statusEl = document.getElementById('status');
+    const statusEl  = document.getElementById('status');
     const articleEl = document.getElementById('article');
     const contentEl = document.getElementById('content');
 
@@ -378,13 +420,11 @@
 
         try {
             if (url) {
-                // Lấy từ repo khác
                 const res = await fetch(url);
                 if (!res.ok) throw new Error('Không tải được file từ URL');
                 mdText = await res.text();
-                sourceLabel = 'Nguồn ngoài (raw GitHub)';
+                sourceLabel = 'Nguồn ngoài';
             } else if (file) {
-                // Lấy file trong repo hiện tại
                 const res = await fetch(`posts/${file}`);
                 if (!res.ok) throw new Error(`Không tìm thấy posts/${file}`);
                 mdText = await res.text();
@@ -393,21 +433,21 @@
                 throw new Error('Thiếu tham số ?file=... hoặc ?url=...');
             }
 
-            // Render
-            let html = marked.parse(mdText);
-            html = processAlerts(html);
+            // 1. Xử lý alerts trước
+            let processed = preprocessAlerts(mdText);
+
+            // 2. Parse Markdown
+            let html = marked.parse(processed);
+
             contentEl.innerHTML = html;
 
-            // Highlight code blocks
+            // 3. Highlight code
             contentEl.querySelectorAll('pre code').forEach(block => {
                 hljs.highlightElement(block);
             });
 
-            // Meta
-            document.getElementById('post-meta').textContent =
-                `Nguồn: ${sourceLabel} · đang học`;
-
-            // Hiện nội dung
+            // 4. Meta + hiện UI
+            document.getElementById('post-meta').textContent = `Nguồn: ${sourceLabel} · đang học`;
             statusEl.style.display = 'none';
             articleEl.style.display = 'block';
             document.getElementById('engagement').style.display = 'block';
@@ -419,16 +459,23 @@
             const h1 = contentEl.querySelector('h1');
             document.title = (h1 ? h1.textContent : 'Bài viết') + ' | Trần Quang Hào';
 
+            // Scroll tới anchor nếu có hash
+            if (location.hash) {
+                const target = document.querySelector(location.hash);
+                if (target) setTimeout(() => target.scrollIntoView({ behavior: 'smooth' }), 100);
+            }
+
             initEngagement();
             initComments();
 
         } catch (err) {
             statusEl.className = 'status error';
             statusEl.textContent = 'Lỗi: ' + err.message;
+            console.error(err);
         }
     }
 
-    // ========== Views + Reactions + Comments (giữ nguyên logic cũ) ==========
+    // ========== Views + Reactions + Comments (giữ nguyên) ==========
     function initEngagement() {
         const viewKey = `views_${POST_ID}`;
         let views = parseInt(localStorage.getItem(viewKey) || '0', 10) + 1;
