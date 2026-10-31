@@ -140,7 +140,10 @@ button:disabled{opacity:.55;cursor:not-allowed}
   </article>
 
   <div class="views-bar" id="views-bar" style="display:none">
-    <span aria-hidden="true">◉</span> <span id="view-count">0</span> lượt đọc trên thiết bị này
+    <strong><span id="global-view-count">Chưa cấu hình</span> lượt xem</strong>
+    <span style="opacity:.7">(tổng lượt xem của bài)</span>
+    <span aria-hidden="true">·</span>
+    <span id="view-count">0</span> lượt đọc trên thiết bị này
     <span style="opacity:.7">(đọc ≥1 phút · tối đa 1 lượt/giờ)</span>
   </div>
 
@@ -148,11 +151,11 @@ button:disabled{opacity:.55;cursor:not-allowed}
     <h3>Link để trao đổi trong bình luận</h3>
     <p>Copy link bài hoặc link mục rồi dán vào Giscus.</p>
     <div class="share-row">
-      <input type="text" id="post-link" readonly>
+      <input type="url" id="post-link" autocomplete="url" spellcheck="false" aria-label="Link bài viết">
       <button type="button" class="btn-copy" id="btn-copy-post">Copy link bài</button>
     </div>
     <div class="share-row" style="margin-top:.5rem">
-      <input type="text" id="section-link" readonly placeholder="Hover heading → bấm #">
+      <input type="url" id="section-link" autocomplete="url" spellcheck="false" placeholder="Dán hoặc tạo link mục" aria-label="Link mục">
       <button type="button" class="btn-copy" id="btn-copy-section">Copy link mục</button>
     </div>
   </div>
@@ -190,7 +193,9 @@ button:disabled{opacity:.55;cursor:not-allowed}
     branch: 'main',
     fetchTimeoutMs: 20000,
     viewDwellMs: 60 * 1000,
-    viewCooldownMs: 60 * 60 * 1000
+    viewCooldownMs: 60 * 60 * 1000,
+    // Điền endpoint GoatCounter của website sau khi tạo site.
+    goatCounterEndpoint: ''
   };
 
   /* KHÔNG đổi category/term bừa bãi — comment gắn theo category + term */
@@ -227,18 +232,48 @@ button:disabled{opacity:.55;cursor:not-allowed}
   function escapeHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-  function isSafeUrl(value, { image = false } = {}) {
-    if (typeof value !== 'string') return false;
-    const raw = value.trim();
-    if (!raw || /[\u0000-\u001f\u007f]/.test(raw)) return false;
-    if (raw.startsWith('#') || raw.startsWith('/') || raw.startsWith('./') || raw.startsWith('../')) return true;
+  function normalizeMarkdownHref(value) {
+    const raw = String(value || '').trim();
+    if (!raw || /[\u0000-\u001f\u007f]/.test(raw)) return null;
+    if (raw.startsWith('#')) return raw;
+    if (/^(mailto|tel):/i.test(raw)) return raw;
+
+    let resolved;
     try {
-      const parsed = new URL(raw, location.href);
-      if (parsed.protocol === 'https:' || parsed.protocol === 'http:') return true;
-      return image && parsed.protocol === 'data:' && /^data:image\/(png|gif|jpeg|webp);base64,/i.test(raw);
+      if (/^https?:\/\//i.test(raw)) {
+        resolved = new URL(raw);
+      } else if (url) {
+        resolved = new URL(raw, url);
+      } else {
+        // Resolve relative links from the source Markdown file in /posts/.
+        const source = new URL('posts/' + encodeURIComponent(file), location.origin + location.pathname);
+        resolved = new URL(raw, source);
+        const postsBase = new URL('posts/', location.origin + location.pathname);
+
+        // Relative links to another .md open through this viewer, not as raw Markdown.
+        if (resolved.origin === location.origin &&
+            resolved.pathname.toLowerCase().endsWith('.md') &&
+            resolved.pathname.startsWith(postsBase.pathname)) {
+          const targetFile = decodeURIComponent(resolved.pathname.slice(postsBase.pathname.length));
+          if (!SAFE_FILE_RE.test(targetFile)) return null;
+          const viewer = new URL(location.pathname, location.origin);
+          viewer.searchParams.set('file', targetFile);
+          viewer.hash = resolved.hash;
+          return viewer.href;
+        }
+      }
     } catch {
-      return false;
+      return null;
     }
+
+    if (resolved.protocol !== 'https:' && resolved.protocol !== 'http:') return null;
+    return resolved.href;
+  }
+
+  function isSafeUrl(value, { image = false } = {}) {
+    const raw = String(value || '').trim();
+    if (image && /^data:image\/(png|gif|jpeg|webp);base64,/i.test(raw)) return true;
+    return normalizeMarkdownHref(raw) !== null;
   }
 
   function sanitizeHtml(dirty) {
@@ -297,52 +332,21 @@ button:disabled{opacity:.55;cursor:not-allowed}
     return `<h${d} id="${id}" data-slug="${id}">${text}</h${d}>\n`;
   };
   renderer.link = function ({ href, title, text }) {
-    const h = String(href || '').trim();
-    if (!isSafeUrl(h)) return String(text || '');
+    const normalized = normalizeMarkdownHref(href);
+    if (!normalized) return String(text || '');
     const t = title ? ` title="${escapeHtml(title)}"` : '';
-    const external = /^https?:\/\//i.test(h);
-    return `<a href="${escapeHtml(h)}"${t}${external ? ' target="_blank" rel="noopener noreferrer nofollow"' : ''}>${text}</a>`;
+    const parsed = new URL(normalized, location.href);
+    const external = parsed.origin !== location.origin;
+    return `<a href="${escapeHtml(normalized)}"${t}${external ? ' target="_blank" rel="noopener noreferrer nofollow"' : ''}>${text}</a>`;
   };
   renderer.image = function ({ href, title, text }) {
-    const src = String(href || '').trim();
-    if (!isSafeUrl(src, { image: true })) return '';
+    const raw = String(href || '').trim();
+    const src = /^data:image\/(png|gif|jpeg|webp);base64,/i.test(raw) ? raw : normalizeMarkdownHref(raw);
+    if (!src) return '';
     const alt = escapeHtml(text || '');
     const t = title ? ` title="${escapeHtml(title)}"` : '';
     return `<img src="${escapeHtml(src)}" alt="${alt}" loading="lazy" decoding="async"${t}>`;
   };
-  renderer.code = function ({ text, lang }) {
-    const resolved = resolveLang(lang);
-    let highlighted = text;
-    try {
-      if (resolved && hljs.getLanguage(resolved)) highlighted = hljs.highlight(text, { language:resolved }).value;
-      else highlighted = hljs.highlightAuto(text).value;
-    } catch (e) {
-      highlighted = escapeHtml(text);
-    }
-    const label = (lang || resolved || 'code').toLowerCase();
-    return `<div class="code-wrap" data-lang="${escapeHtml(label)}"><span class="code-lang">${escapeHtml(label)}</span><button type="button" class="btn-code-copy">Copy</button><pre><code class="hljs${resolved?' language-'+resolved:''}">${highlighted}</code></pre></div>\n`;
-  };
-  marked.setOptions({ renderer, gfm:true, breaks:false, async:false });
-
-  const params = new URLSearchParams(location.search);
-  const fileRaw = params.get('file');
-  const urlRaw = params.get('url');
-  let file = null, url = null;
-  if (fileRaw && SAFE_FILE_RE.test(fileRaw)) file = fileRaw;
-  if (urlRaw) {
-    try {
-      const u = new URL(urlRaw);
-      if (u.protocol === 'https:' && ALLOWED_MD_HOSTS.has(u.hostname)) url = u.toString();
-    } catch (e) {}
-  }
-  const POST_ID = file || url || 'unknown';
-
-  const statusEl = document.getElementById('status');
-  const articleEl = document.getElementById('article');
-  const contentEl = document.getElementById('content');
-  const progressEl = document.getElementById('read-progress');
-  const sub = document.getElementById('status-sub');
-  if (sub) sub.textContent = file ? file : (url ? 'nguồn ngoài' : '');
 
   function showError(msg) {
     statusEl.className = 'status error';
@@ -496,23 +500,29 @@ button:disabled{opacity:.55;cursor:not-allowed}
     });
   }
   function setupShareTools() {
-    const postLink = getPostUrl('');
-    document.getElementById('post-link').value = postLink;
+    const postInput = document.getElementById('post-link');
+    const sectionInput = document.getElementById('section-link');
+    if (!postInput.value) postInput.value = getPostUrl('');
+
     document.getElementById('btn-copy-post').addEventListener('click', function () {
-      copyText(postLink).then(
+      const value = postInput.value.trim();
+      if (!value) return alert('Nhập link bài viết trước.');
+      copyText(value).then(
         () => flashBtn(this, 'Copy link bài'),
         error => { console.error('[copy]', error); this.textContent = 'Copy lỗi'; }
       );
     });
+
     document.getElementById('btn-copy-section').addEventListener('click', function () {
-      const v = document.getElementById('section-link').value;
-      if (!v) return alert('Hover heading và bấm # trước.');
-      copyText(v).then(
+      const value = sectionInput.value.trim();
+      if (!value) return alert('Nhập link mục hoặc hover heading và bấm # để tự tạo link.');
+      copyText(value).then(
         () => flashBtn(this, 'Copy link mục'),
         error => { console.error('[copy]', error); this.textContent = 'Copy lỗi'; }
       );
     });
   }
+
   function renderMath() {
     if (typeof renderMathInElement !== 'function') return;
     try {
@@ -595,6 +605,55 @@ button:disabled{opacity:.55;cursor:not-allowed}
     });
     window.addEventListener('pagehide', stop, { once: true });
     schedule();
+  }
+
+  function initGlobalViews() {
+    const output = document.getElementById('global-view-count');
+    const endpoint = String(CONFIG.goatCounterEndpoint || '').trim();
+    if (!output) return;
+
+    if (!endpoint) {
+      output.textContent = 'Chưa cấu hình';
+      output.title = 'Cần cấu hình GoatCounter endpoint để đếm lượt xem toàn website.';
+      return;
+    }
+
+    let parsed;
+    try { parsed = new URL(endpoint); } catch {
+      output.textContent = 'Endpoint không hợp lệ';
+      return;
+    }
+    if (parsed.protocol !== 'https:') {
+      output.textContent = 'Endpoint không hợp lệ';
+      console.error('[views] GoatCounter endpoint phải dùng HTTPS.');
+      return;
+    }
+
+    const viewPath = '/posts/' + (file || 'external');
+    window.goatcounter = Object.assign({}, window.goatcounter || {}, { path: viewPath });
+
+    const script = document.createElement('script');
+    script.src = 'https://gc.zgo.at/count.js';
+    script.async = true;
+    script.dataset.goatcounter = endpoint;
+    script.onload = () => {
+      if (!window.goatcounter || typeof window.goatcounter.visit_count !== 'function') {
+        output.textContent = 'Không tải được bộ đếm';
+        return;
+      }
+      try {
+        window.goatcounter.visit_count({
+          append: '#global-view-count',
+          path: viewPath,
+          no_branding: true
+        });
+      } catch (error) {
+        output.textContent = 'Không lấy được';
+        console.warn('[views] GoatCounter:', error);
+      }
+    };
+    script.onerror = () => { output.textContent = 'Không kết nối được'; };
+    document.head.appendChild(script);
   }
 
   /**
@@ -705,7 +764,8 @@ button:disabled{opacity:.55;cursor:not-allowed}
       setupShareTools();
       ensureScrollToHash();
       updateReadProgress();
-      initViews();
+      initViews(); // Bộ đếm lượt đọc cũ, giữ nguyên.
+      initGlobalViews(); // Bộ đếm lượt xem tổng hợp, tách biệt.
       loadGiscus();
     } catch (err) {
       showError(err?.name === 'AbortError' ? 'Timeout' : (err?.message || 'Lỗi tải'));
