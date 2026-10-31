@@ -8,7 +8,7 @@
 <title>Trần Quang Hào | Low-Level &amp; Reverse Engineering</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%AC%A1%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="ll.css">
-<link rel="stylesheet" href="layout.css">
+<link rel="stylesheet" href="site.css">
 </head>
 <body>
 <canvas id="rain" aria-hidden="true"></canvas>
@@ -16,18 +16,13 @@
   <div class="top-bar">
     <nav class="nav">
       <a href="index.html" class="logo"><span>~/</span>tranquanghao</a>
-      <ul class="nav-links">
-        <li><a href="index.html" class="active">home</a></li>
-        <li><a href="notes.html">notes</a></li>
-      </ul>
+      <ul class="nav-links"><li><a href="index.html" class="active">home</a></li><li><a href="notes.html">notes</a></li></ul>
     </nav>
   </div>
 
-  <div class="layout">
-    <aside class="side" id="side" aria-label="Mục lục"></aside>
-
+  <div class="home">
     <main>
-      <header class="hero" id="intro">
+      <header id="about" style="margin-bottom:1.5rem">
         <h1>Trần Quang Hào</h1>
         <p class="subtitle">[ đang học · low-level systems &amp; reverse engineering ]</p>
         <p class="tagline">Không gian ghi chép cá nhân khi mình tìm hiểu kiến trúc máy tính, lập trình cấp thấp và cách phần mềm thực sự chạy trên phần cứng.</p>
@@ -38,8 +33,6 @@
         <div class="term-body">
           <div class="tl cmd"><span class="p">hao@lowlevel<em>:~$</em></span> <span class="t">whoami</span></div>
           <div class="tl out"><b>tranquanghao</b> — người đang học low-level</div>
-          <div class="tl cmd"><span class="p">hao@lowlevel<em>:~$</em></span> <span class="t">uname -a</span></div>
-          <div class="tl out">Linux lowlevel 6.x x86_64 GNU/Linux <span class="c">// ghi chú &amp; thử nghiệm</span></div>
           <div class="tl cmd"><span class="p">hao@lowlevel<em>:~$</em></span> <span class="t">objdump -d --no-show-raw-insn learning | head -4</span></div>
           <div class="tl out"><span class="n">401126</span> <span class="k">push</span>  rbp
 <span class="n">401127</span> <span class="k">mov</span>   rbp, rsp
@@ -52,27 +45,8 @@
 
       <div class="note"><b>[!]</b> Giao diện trang này do AI hỗ trợ dựng. Mình tập trung học low-level, không chuyên frontend.</div>
 
-      <section id="focus">
-        <h2 class="section-title">readelf --focus</h2>
-        <ul class="focus-list">
-          <li class="focus-item"><span class="addr">0x0001</span><strong>Reverse Engineering</strong><span class="d">Đọc binary, dùng debugger, hiểu control flow</span></li>
-          <li class="focus-item"><span class="addr">0x0002</span><strong>Low-Level Systems</strong><span class="d">Memory, system call, cách OS quản lý tiến trình</span></li>
-          <li class="focus-item"><span class="addr">0x0003</span><strong>C &amp; Assembly (x86-64)</strong><span class="d">Viết và đọc code gần với phần cứng hơn</span></li>
-          <li class="focus-item"><span class="addr">0x0004</span><strong>Binary &amp; bảo mật cơ bản</strong><span class="d">Hiểu lỗ hổng đơn giản, cách chương trình bị lỗi</span></li>
-        </ul>
-      </section>
-
-      <section>
-        <h2 class="section-title">man blog</h2>
-        <div class="prose">
-          <p>Blog này giống như <em>sổ tay kỹ thuật</em> của mình: ghi chú, thử nghiệm và writeup nhỏ để tự ôn lại, đồng thời chia sẻ cho ai đang đi cùng con đường.</p>
-        </div>
-      </section>
-
-      <div class="cta-card">
-        <p>Xem các ghi chú và writeup nhỏ mình đã viết.</p>
-        <a href="notes.html" class="btn">$ ls posts/</a>
-      </div>
+      <h2 class="section-title">ls -t posts/</h2>
+      <div id="plist" class="plist"><div class="status" style="text-align:center;color:var(--dim)">Đang đọc posts/<span class="cur"></span></div></div>
 
       <footer>
         <p>© 2026 tranquanghao708 · GitHub Pages</p>
@@ -80,33 +54,72 @@
       </footer>
     </main>
 
-    <aside class="rside" aria-hidden="true">
-      <div class="chip">
-        <svg viewBox="0 0 240 240" fill="none" stroke-linecap="round">
-          <g stroke="#58a6ff" stroke-width="5" stroke-dasharray="6 8" opacity=".7"><path d="M60 12H180M60 228H180M12 60V180M228 60V180"/></g>
-          <rect x="32" y="32" width="176" height="176" rx="10" fill="#0d131b" stroke="#58a6ff" stroke-width="2"/>
-          <rect x="62" y="62" width="116" height="116" rx="6" fill="#0a0e14" stroke="#3fb950" stroke-width="1.5"/>
-          <g stroke="#243040" stroke-width="1"><path d="M62 90H178M62 120H178M62 150H178M90 62V178M120 62V178M150 62V178"/></g>
-          <g stroke="#3fb950" stroke-width="1.5" stroke-dasharray="10 150">
-            <path d="M42 90H90V42"><animate attributeName="stroke-dashoffset" from="160" to="0" dur="3s" repeatCount="indefinite"/></path>
-            <path d="M198 150H150V198"><animate attributeName="stroke-dashoffset" from="160" to="0" dur="3.6s" repeatCount="indefinite"/></path>
-            <path d="M42 150H62M198 90H178M120 42V62M120 198V178"><animate attributeName="stroke-dashoffset" from="160" to="0" dur="2.4s" repeatCount="indefinite"/></path>
-          </g>
-          <text x="120" y="116" text-anchor="middle" fill="#58a6ff" font-family="monospace" font-size="15" font-weight="700">x86-64</text>
-          <text x="120" y="136" text-anchor="middle" fill="#5d6b7e" font-family="monospace" font-size="9">0x00401136</text>
-          <circle cx="46" cy="46" r="3" fill="#e3b341"/>
-        </svg>
-        <div class="regs">
-          <div><b>RIP</b> <i>0x401136</i></div>
-          <div><b>RSP</b> 0x7ffe3a10</div>
-          <div><b>RAX</b> 0x0 · <b>ZF</b>=1</div>
-        </div>
-      </div>
+    <aside class="panel">
+      <section><h3>mới cập nhật</h3><div id="recent"><a>…</a></div></section>
+      <section id="chips-box" hidden><h3>chủ đề</h3><div class="chips" id="chips"></div></section>
+      <section id="repos"><h3>repos</h3><div id="repo-links"></div></section>
     </aside>
   </div>
 </div>
 <script src="ll.js"></script>
-<script src="sidebar.js"></script>
-<script>LL.type(document.getElementById('term'));</script>
+<script src="site.js"></script>
+<script>
+(function () {
+  'use strict';
+  LL.type(document.getElementById('term'));
+  var S = window.SITE, esc = S.esc, $ = function (id) { return document.getElementById(id); };
+  var NAME = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,120}\.md$/;
+
+  $('repo-links').innerHTML = S.repos.map(function (r) {
+    return '<a href="' + S.gh + encodeURIComponent(r[0]) + '" target="_blank" rel="noopener noreferrer">' + esc(r[0]) +
+      ' <small style="color:var(--dim)">· ' + esc(r[1]) + '</small> ↗</a>';
+  }).join('');
+
+  function info(text, name) {
+    var o = { name: name, title: name.replace(/\.md$/i, '').replace(/[-_]+/g, ' '), excerpt: '', tags: [], date: '' };
+    var fm = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/), body = text;
+    if (fm) {
+      body = text.slice(fm[0].length);
+      var t = fm[1].match(/^tags?\s*:\s*\[?(.*?)\]?\s*$/m), d = fm[1].match(/^date\s*:\s*(.+)$/m), ti = fm[1].match(/^title\s*:\s*(.+)$/m);
+      if (t) o.tags = t[1].split(',').map(function (x) { return x.trim().replace(/^["']|["']$/g, ''); }).filter(Boolean);
+      if (d) o.date = d[1].trim().replace(/^["']|["']$/g, '').slice(0, 10);
+      if (ti) o.title = ti[1].trim().replace(/^["']|["']$/g, '');
+    }
+    var h1 = body.match(/^#\s+(.+)$/m);
+    if (h1 && !(fm && /^title\s*:/m.test(fm[1]))) o.title = h1[1].trim();
+    var p = body.split(/\n\s*\n/).map(function (x) { return x.trim(); })
+      .filter(function (x) { return x && !/^(#|```|\||>|[-*+]\s|\d+\.\s|!\[|<|\$\$)/.test(x); })[0];
+    if (p) o.excerpt = p.replace(/[`*_~]/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').slice(0, 200);
+    return o;
+  }
+
+  fetch('https://api.github.com/repos/' + S.user + '/' + S.repo + '/contents/posts?ref=main', { headers: { Accept: 'application/vnd.github+json' } })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function (files) {
+      var names = files.filter(function (f) { return f.type === 'file' && NAME.test(f.name); })
+        .map(function (f) { return f.name; }).sort().reverse().slice(0, 8);
+      if (!names.length) { $('plist').innerHTML = '<div class="empty">Chưa có bài trong <code>posts/</code>.</div>'; $('recent').innerHTML = '<a>(trống)</a>'; return; }
+      return Promise.all(names.map(function (n) {
+        return fetch('posts/' + encodeURIComponent(n)).then(function (r) { return r.ok ? r.text() : ''; }).catch(function () { return ''; })
+          .then(function (t) { return info(t, n); });
+      })).then(function (list) {
+        var href = function (p) { return 'post.html?file=' + encodeURIComponent(p.name); };
+        $('plist').innerHTML = list.map(function (p) {
+          return '<a class="pcard" href="' + href(p) + '"><h2>' + esc(p.title) + '</h2>' + (p.excerpt ? '<p>' + esc(p.excerpt) + '</p>' : '') +
+            '<div class="pm">' + esc([p.date, p.tags.join(' · ')].filter(Boolean).join('  ·  ') || p.name) + '</div></a>';
+        }).join('');
+        $('recent').innerHTML = list.slice(0, 5).map(function (p) { return '<a href="' + href(p) + '">' + esc(p.title) + '</a>'; }).join('');
+        var cnt = {};
+        list.forEach(function (p) { p.tags.forEach(function (t) { cnt[t] = (cnt[t] || 0) + 1; }); });
+        var tags = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; }).slice(0, 12);
+        if (tags.length) { $('chips').innerHTML = tags.map(function (t) { return '<span>' + esc(t) + '</span>'; }).join(''); $('chips-box').hidden = false; }
+      });
+    })
+    .catch(function (e) {
+      $('plist').innerHTML = '<div class="empty">Không đọc được danh sách bài (' + esc(e.message) + '). <a href="notes.html" style="color:var(--accent)">Mở trang ghi chú</a></div>';
+      $('recent').innerHTML = '<a href="notes.html">xem ghi chú</a>';
+    });
+})();
+</script>
 </body>
 </html>
