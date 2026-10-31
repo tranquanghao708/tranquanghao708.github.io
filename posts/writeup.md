@@ -1,134 +1,74 @@
-# Kernel: mmap() & munmap()
+# CSAPP : Program Encoding
+
+> Ngày bắt đầu viết : 23/9/2026
+
+> Ngày hoàn thành : 24/10/2026
 
 **Mục lục**
 
 <table>
 <tr>
-<td valign="top" width="50%">
+<td width="50%" valign="top">
 
-- [1. Tổng quan về Memory Mapping](#1-tổng-quan-về-memory-mapping)
-  - [1.1. Memory Mapping là gì?](#11-memory-mapping-là-gì)
-	   - [1.1.1. Virtual Address và physical address](#111-virtual-address-và-physical-address)
-	   - [1.1.3. Mối quan hệ giữa phần mềm và địa chỉ bộ nhớ](#113-mối-quan-hệ-giữa-phần-mềm-và-địa-chỉ-bộ-nhớ)
-  - [1.2. `mmap()` là gì?](#12-mmap-là-gì)
-  - [1.3. `munmap()` là gì?](#13-munmap-là-gì)
-  - [1.4. Mối quan hệ giữa `mmap()` và `munmap()`](#14-mối-quan-hệ-giữa-mmap-và-munmap)
-  - [1.5. Virtual Memory và Physical Memory](#15-virtual-memory-và-physical-memory)
-  - [1.6. Vòng đời của một Memory Mapping](#16-vòng-đời-của-một-memory-mapping)
-  	   - [1.6.1. Yêu cầu thiết lập ánh xạ](#161-yêu-cầu-thiết-lập-ánh-xạ)
-	   - [1.6.2. Kernel quản lý vùng địa chỉ ảo](#162-kernel-quản-lý-vùng-địa-chỉ-ảo)
-	   - [1.6.3. Chương trình truy cập vùng ánh xạ](#163-chương-trình-truy-cập-vùng-ánh-xạ)
-	   - [1.6.4. Gỡ bỏ ánh xạ](#164-gỡ-bỏ-ánh-xạ)
-- [2. Cơ chế hoạt động ở User Space](#2-cơ-chế-hoạt-động-ở-user-space)
-  - [2.1. Khai báo và Prototype của `mmap()`](#21-khai-báo-và-prototype-của-mmap)
-  - [2.2. Các tham số của `mmap()`](#22-các-tham-số-của-mmap)
-  - [2.3. `addr` và `length`](#23-addr-và-length)
-  - [2.4. `prot` và quyền truy cập bộ nhớ](#24-prot-và-quyền-truy-cập-bộ-nhớ)
-	   - [2.4.1. `prot` hoạt động như thế nào?](#241-prot-hoạt-động-như-thế-nào)
-  - [2.5. `flags`: `MAP_PRIVATE`, `MAP_SHARED` và `MAP_ANONYMOUS`](#25-flags-map_private-map_shared-và-map_anonymous)
-	   - [2.5.1. `MAP_PRIVATE` — ánh xạ riêng tư](#251-mapprivate-—-ánh-xạ-riêng-tư)
-	   - [2.5.1.1 Copy-on-Write (COW)](#2511-copy-on-write-cow)
-	   - [2.5.2. MAP_SHARED — ánh xạ chia sẻ](#252-mapshared-—-ánh-xạ-chia-sẻ)
-	   - [2.5.3. MAP_ANONYMOUS — ánh xạ bộ nhớ ẩn danh](#253-mapanonymous-—-ánh-xạ-bộ-nhớ-ẩn-danh)
-  - [2.6. `fd` và `offset`](#26-fd-và-offset)
-  - [2.7. Giá trị trả về và xử lý lỗi](#27-giá-trị-trả-về-và-xử-lý-lỗi)
-  - [2.8. Khai báo và Prototype của `munmap()`](#28-khai-báo-và-prototype-của-munmap)
-  - [2.9. Các tham số `addr` và `length` của `munmap()`](#29-các-tham-số-addr-và-length-của-munmap)
-  - [2.10. Giá trị trả về và xử lý lỗi của `munmap()`](#210-giá-trị-trả-về-và-xử-lý-lỗi-của-munmap)
+- [1.Tổng quan về Program Encoding](#1tổng-quan-về-program-encoding)
+	- [1.1 Program Encoding là gì?](#11-program-encoding-là-gì)
+	- [1.2 Quá trình từ mã nguồn C tới machine code](#12-quá-trình-từ-mã-nguồn-c-tới-machine-code)
+	   - [1.2.1 Preprocessing](#121-preprocessing)
+	   - [1.2.2 Compilation](#122-compilation)
+	   - [1.2.3 Assembling](#123-assembling)
+	   - [1.2.4 Linking](#124-linking)
+	   - [1.2.5 CPU thực thi machine code](#125-cpu-thực-thi-machine-code)
+	- [1.3. Assembly và Machine Code](#13-assembly-và-machine-code)
+       - [1.3.1. Assembly không phải Machine Code](#131-assembly-không-phải-machine-code)
+       - [1.3.2. Assembly là dạng biểu diễn gần với Machine Code](#132-assembly-là-dạng-biểu-diễn-gần-với-machine-code)
+       - [1.3.3. Một Assembly instruction có thể có độ dài khác nhau](#133-một-assembly-instruction-có-thể-có-độ-dài-khác-nhau)
+       - [1.3.4. Disassembler: đi từ Machine Code về Assembly](#134-disassembler-đi-từ-machine-codevề-assembly)
+	   - [1.3.5. Phân biệt giữa byte opcode và các data/padding](#135-phân-biệt-giữa-byte-opcode-và-các-datapadding)
+       - [1.3.6. Vì sao Reverse Engineering cần hiểu cả hai?](#136-vì-sao-reverse-engineering-cần-hiểu-cả-hai)
+       - [1.3.7. Phân biệt giữa instruction, vaddr instruction, offset và assembly representation của instruction trong gdb](#137-phân-biệt-giữa-instruction-vaddr-instruction-offset-và-assembly-representation-của-instruction-trong-gdb)
 
-- [3. Từ libc đến Linux Kernel](#3-từ-libc-đến-linux-kernel)
-  - [3.1. Lời gọi hàm trong chương trình C](#31-lời-gọi-hàm-trong-chương-trình-c)
-  - [3.2. System call `mmap`](#32-system-call-mmap)
-  - [3.3. System call `munmap`](#33-system-call-munmap)
-  - [3.4. Truyền tham số qua System V AMD64 ABI](#34-truyền-tham-số-qua-system-v-amd64-abi)
-  - [3.5. Chuyển từ User Mode sang Kernel Mode](#35-chuyển-từ-user-mode-sang-kernel-mode)
-  - [3.6. Theo dõi system call bằng `strace`](#36-theo-dõi-system-call-bằng-strace)
+- [2.Cấu trúc tổng quát của một Instruction](#2cấu-trúc-tổng-quát-của-một-instruction)
+  - [2.1. Opcode](#21-opcode)
+  - [2.2. Operand](#22-operand)
+  - [2.3. Register Encoding](#23-register-encoding)
+  - [2.4. Immediate Value](#24-immediate-value)
+  - [2.5. Displacement](#25-displacement)
+  - [2.6. Instruction Length](#26-instruction-length)
 
-- [4. Cấu trúc quản lý bộ nhớ trong Kernel](#4-cấu-trúc-quản-lý-bộ-nhớ-trong-kernel)
-  - [4.1. Virtual Address Space của một tiến trình](#41-virtual-address-space-của-một-tiến-trình)
-  - [4.2. Memory Region và Virtual Memory Area (VMA)](#42-memory-region-và-virtual-memory-area-vma)
-  - [4.3. `struct mm_struct`](#43-struct-mm_struct)
-  - [4.4. `struct vm_area_struct`](#44-struct-vm_area_struct)
-  - [4.5. Quan hệ giữa VMA và Page Table](#45-quan-hệ-giữa-vma-và-page-table)
-  - [4.6. Quản lý các VMA trong Linux Kernel](#46-quản-lý-các-vma-trong-linux-kernel)
-
-- [5. Cơ chế xử lý `mmap()` trong Kernel](#5-cơ-chế-xử-lý-mmap-trong-kernel)
-  - [5.1. Điểm bắt đầu của system call](#51-điểm-bắt-đầu-của-system-call)
-  - [5.2. Kiểm tra tham số và cờ ánh xạ](#52-kiểm-tra-tham-số-và-cờ-ánh-xạ)
-  - [5.3. Tìm kiếm vùng địa chỉ ảo phù hợp](#53-tìm-kiếm-vùng-địa-chỉ-ảo-phù-hợp)
-  - [5.4. Tạo và thiết lập VMA](#54-tạo-và-thiết-lập-vma)
-  - [5.5. Ánh xạ Anonymous Memory](#55-ánh-xạ-anonymous-memory)
-  - [5.6. Ánh xạ File-backed Memory](#56-ánh-xạ-file-backed-memory)
-  - [5.7. Thiết lập quyền truy cập bộ nhớ](#57-thiết-lập-quyền-truy-cập-bộ-nhớ)
-  - [5.8. Trả địa chỉ ánh xạ về User Space](#58-trả-địa-chỉ-ánh-xạ-về-user-space)
-
-- [6. Cơ chế xử lý `munmap()` trong Kernel](#6-cơ-chế-xử-lý-munmap-trong-kernel)
-  - [6.1. Điểm bắt đầu của system call](#61-điểm-bắt-đầu-của-system-call)
-  - [6.2. Kiểm tra địa chỉ và phạm vi cần gỡ ánh xạ](#62-kiểm-tra-địa-chỉ-và-phạm-vi-cần-gỡ-ánh-xạ)
-  - [6.3. Xác định các VMA bị ảnh hưởng](#63-xác-định-các-vma-bị-ảnh-hưởng)
-  - [6.4. Gỡ bỏ toàn bộ một VMA](#64-gỡ-bỏ-toàn-bộ-một-vma)
-  - [6.5. Gỡ bỏ một phần VMA](#65-gỡ-bỏ-một-phần-vma)
-  - [6.6. Chia tách VMA khi gỡ ánh xạ ở giữa](#66-chia-tách-vma-khi-gỡ-ánh-xạ-ở-giữa)
-  - [6.7. Cập nhật cấu trúc quản lý địa chỉ ảo](#67-cập-nhật-cấu-trúc-quản-lý-địa-chỉ-ảo)
+- [3. REX Prefix](#3-rex-prefix)
+  - [3.1. REX Prefix là gì?](#31-rex-prefix-là-gì)
+  - [3.2. Cấu trúc byte REX](#32-cấu-trúc-byte-rex)
+  - [3.3. Các nhóm của Prefix ngoài Rex](#33-các-nhóm-của-prefix-ngoài-rex)
 
 </td>
-<td valign="top" width="50%">
 
-- [7. Page Table, Physical Memory và TLB](#7-page-table-physical-memory-và-tlb)
-  - [7.1. Virtual Page và Physical Frame](#71-virtual-page-và-physical-frame)
-  - [7.2. Page Table Entries (PTE)](#72-page-table-entries-pte)
-  - [7.3. Page Fault và Demand Paging](#73-page-fault-và-demand-paging)
-  - [7.4. Gỡ bỏ ánh xạ trong Page Table](#74-gỡ-bỏ-ánh-xạ-trong-page-table)
-  - [7.5. Anonymous Memory và File-backed Memory](#75-anonymous-memory-và-file-backed-memory)
-  - [7.6. Gỡ ánh xạ và giải phóng trang vật lý](#76-gỡ-ánh-xạ-và-giải-phóng-trang-vật-lý)
-  - [7.7. TLB và cơ chế Address Translation](#77-tlb-và-cơ-chế-address-translation)
-  - [7.8. TLB Invalidation và TLB Shootdown](#78-tlb-invalidation-và-tlb-shootdown)
+<td width="50%" valign="top">
 
-- [8. Memory Mapping trong thực tế](#8-memory-mapping-trong-thực-tế)
-  - [8.1. Anonymous Mapping](#81-anonymous-mapping)
-  - [8.2. File-backed Mapping](#82-file-backed-mapping)
-  - [8.3. `MAP_PRIVATE` và Copy-on-Write](#83-map_private-và-copy-on-write)
-  - [8.4. `MAP_SHARED` và bộ nhớ chia sẻ](#84-map_shared-và-bộ-nhớ-chia-sẻ)
-  - [8.5. Memory Mapping và ELF Loader](#85-memory-mapping-và-elf-loader)
-  - [8.6. Memory Mapping và Dynamic Linker](#86-memory-mapping-và-dynamic-linker)
-  - [8.7. Memory Mapping và cấp phát bộ nhớ động](#87-memory-mapping-và-cấp-phát-bộ-nhớ-động)
+- [4. ModR/M Byte](#4-modrm-byte)
+  - [4.1. ModR/M là gì?](#41-modrm-là-gì)
+  - [4.2. Cấu trúc ModR/M](#42-cấu-trúc-modrm)
+  - [4.3. Giải mã ModR/M bằng tay](#43-giải-mã-modrm-bằng-tay)
 
-- [9. Phân tích mã nguồn Linux Kernel](#9-phân-tích-mã-nguồn-linux-kernel)
-  - [9.1. Xác định phiên bản Kernel](#91-xác-định-phiên-bản-kernel)
-  - [9.2. Tìm implementation của `mmap()`](#92-tìm-implementation-của-mmap)
-  - [9.3. Tìm implementation của `munmap()`](#93-tìm-implementation-của-munmap)
-  - [9.4. Truy vết Call Graph](#94-truy-vết-call-graph)
-  - [9.5. Phân tích quá trình tạo VMA](#95-phân-tích-quá-trình-tạo-vma)
-  - [9.6. Phân tích quá trình cập nhật và xóa VMA](#96-phân-tích-quá-trình-cập-nhật-và-xóa-vma)
-  - [9.7. Phân tích xử lý Page Table và TLB](#97-phân-tích-xử-lý-page-table-và-tlb)
-  - [9.8. Đối chiếu mã nguồn với thực nghiệm](#98-đối-chiếu-mã-nguồn-với-thực-nghiệm)
+- [5. SIB Byte](#5-sib-byte)
+  - [5.1. SIB là gì?](#51-sib-là-gì)
+  - [5.2. Cấu trúc SIB](#52-cấu-trúc-sib)
+  - [5.3. Giải mã SIB bằng tay](#53-giải-mã-sib-bằng-tay)
 
-- [10. Thực nghiệm bằng C và Linux Tools](#10-thực-nghiệm-bằng-c-và-linux-tools)
-  - [10.1. Tạo Anonymous Mapping bằng `mmap()`](#101-tạo-anonymous-mapping-bằng-mmap)
-  - [10.2. Ghi và đọc dữ liệu trong vùng ánh xạ](#102-ghi-và-đọc-dữ-liệu-trong-vùng-ánh-xạ)
-  - [10.3. Thực thi Machine Code trong vùng nhớ ánh xạ](#103-thực-thi-machine-code-trong-vùng-nhớ-ánh-xạ)
-  - [10.4. Quan sát `/proc/<pid>/maps`](#104-quan-sát-procpidmaps)
-  - [10.5. Gỡ bỏ toàn bộ Mapping bằng `munmap()`](#105-gỡ-bỏ-toàn-bộ-mapping-bằng-munmap)
-  - [10.6. Gỡ bỏ một phần Mapping](#106-gỡ-bỏ-một-phần-mapping)
-  - [10.7. Theo dõi bằng `strace`](#107-theo-dõi-bằng-strace)
-  - [10.8. Debug bằng GDB](#108-debug-bằng-gdb)
-  - [10.9. Kiểm tra hành vi bằng `/proc/<pid>/smaps`](#109-kiểm-tra-hành-vi-bằng-procpidsmaps)
+- [6. Object Code và ELF](#6-object-code-và-elf)
+  - [6.1. Object code là gì?](#61-object-code-là-gì)
+  - [6.2. ELF là gì?](#62-elf-là-gì)
+  - [6.3. Code Section](#62-code-section)
+  - [6.3. Relocation](#63-relocation)
+  - [6.4. Symbol và Symbol Table](#64-symbol-và-symbol-table)
+  - [6.5. Từ Object File đến Executable](#65-từ-object-file-đến-executable)
 
-- [11. Lỗi và các trường hợp đặc biệt](#11-lỗi-và-các-trường-hợp-đặc-biệt)
-  - [11.1. `MAP_FAILED` và xử lý lỗi](#111-map_failed-và-xử-lý-lỗi)
-  - [11.2. Địa chỉ không căn chỉnh theo Page Size](#112-địa-chỉ-không-căn-chỉnh-theo-page-size)
-  - [11.3. `length` bằng 0](#113-length-bằng-0)
-  - [11.4. Gỡ bỏ một vùng chưa được ánh xạ](#114-gỡ-bỏ-một-vùng-chưa-được-ánh-xạ)
-  - [11.5. Truy cập vùng nhớ sau `munmap()`](#115-truy-cập-vùng-nhớ-sau-munmap)
-  - [11.6. Lỗi quyền truy cập bộ nhớ](#116-lỗi-quyền-truy-cập-bộ-nhớ)
-  - [11.7. Đồng bộ hóa khi nhiều luồng sử dụng Mapping](#117-đồng-bộ-hóa-khi-nhiều-luồng-sử-dụng-mapping)
-
-- [12. Tổng kết và tài liệu tham khảo](#12-tổng-kết-và-tài-liệu-tham-khảo)
-  - [12.1. Tóm tắt cơ chế `mmap()`](#121-tóm-tắt-cơ-chế-mmap)
-  - [12.2. Tóm tắt cơ chế `munmap()`](#122-tóm-tắt-cơ-chế-munmap)
-  - [12.3. Phân biệt VMA, Page Table và Physical Memory](#123-phân-biệt-vma-page-table-và-physical-memory)
-  - [12.4. Tổng hợp vòng đời Memory Mapping](#124-tổng-hợp-vòng-đời-memory-mapping)
-  - [12.5. Tài liệu tham khảo](#125-tài-liệu-tham-khảo)
+- [7. Lập trình byte program](#7-lập-trình-byte-program)
+  - [7.1. lập trình tích hợp byte program trên file định dạng C](#71-lập-trình-tích-hợp-byte-program-trên-file-định-dạng-c)
+  - [7.2. lập trình tích hợp byte program trên file định dạng hợp ngữ](#72-lập-trình-tích-hợp-byte-program-trên-file-định-dạng-hợp-ngữ)
+- [8. Tổng kết](#10-tổng-kết)
+  - [8.1. Instruction được encode như thế nào?](#81-instruction-được-encode-như-thế-nào)
+  - [8.2. Quy trình Decode một Instruction](#82-quy-trình-decode-một-instruction)
+  - [8.3. Những gì cần nhớ](#83-những-gì-cần-nhớ)
 
 </td>
 </tr>
@@ -136,444 +76,1975 @@
 
 ---
 
-## 1. Tổng quan về Memory Mapping
+## 1.Tổng quan về Program Encoding
+### 1.1 Program Encoding là gì?
 
-### 1.1. Memory Mapping là gì?
+Khái niệm program encoding ko chỉ là một sản phẩm sau khi thông qua quá trình biên dịch từ ngôn ngữ lập trình sang mã máy mà CPU có thể hiểu được mà là cách chương trình được biểu diễn ở các mức khác nhau, đặc biệt trong ngữ cảnh CSAPP là cách mã nguồn được chuyển thành machine-level representation mà CPU thực thi, nói đơn giản program encoding là mã hóa các ngôn ngữ cho con người có thể đọc được dễ dàng thành ngôn ngữ máy cho máy tính làm việc thông qua các trình biên dịch
 
-Memory Mapping (ánh xạ bộ nhớ) là cơ chế thiết lập mối quan hệ giữa một vùng địa chỉ ảo trong không gian địa chỉ của tiến trình với bộ nhớ hoặc một đối tượng được ánh xạ, chẳng hạn như một file. Nhờ cơ chế này, tiến trình có thể truy cập dữ liệu thông qua địa chỉ ảo mà không cần trực tiếp quản lý địa chỉ vật lý của RAM.
+### 1.2 Quá trình từ mã nguồn C tới machine code
+#### 1.2.1 Preprocessing
 
-Trên Linux, `mmap()` là một system-call interface cho phép chương trình yêu cầu kernel thiết lập một vùng ánh xạ trong không gian địa chỉ ảo của tiến trình. Ngược lại, `munmap()` cho phép gỡ bỏ ánh xạ trong một phạm vi địa chỉ được chỉ định.
-
-Để hiểu bản chất của Memory Mapping, trước tiên ta cần phân biệt ba khái niệm: Virtual Address, Physical Address và Memory Mapping.
-
-#### 1.1.1. Virtual Address và Physical Address
-
-Địa chỉ ảo (Virtual Address - VA) và địa chỉ vật lý (Physical Address - PA) là hai loại địa chỉ được sử dụng trong cơ chế quản lý bộ nhớ của hệ thống máy tính.
-
-**Virtual Address (VA)** là địa chỉ thuộc không gian địa chỉ ảo mà tiến trình sử dụng để truy cập bộ nhớ. Trên hệ điều hành hiện đại như Linux, mỗi tiến trình thông thường có không gian địa chỉ ảo riêng. Địa chỉ này được sử dụng để truy cập các vùng bộ nhớ như Stack, Heap, vùng dữ liệu và các vùng ánh xạ khác.
-
-**Physical Address (PA)** là địa chỉ thuộc không gian địa chỉ vật lý. Khi địa chỉ ảo được dịch thành công sang địa chỉ vật lý tương ứng, phần cứng có thể sử dụng địa chỉ vật lý đó để truy cập bộ nhớ vật lý, chẳng hạn như RAM.
-
-Trên hệ thống sử dụng cơ chế phân trang (Paging), CPU phối hợp với bộ phận quản lý bộ nhớ (Memory Management Unit - MMU) để dịch địa chỉ ảo sang địa chỉ vật lý thông qua các cấu trúc Page Table.
-
-Có thể hình dung quá trình này như sau:
-
-```text
-             User Space
-                 |
-                 v
-         Virtual Address
-           0x7f001000
-                 |
-                 v
-          +-------------+
-          |     MMU     |
-          |  Address    |
-          | Translation |
-          +-------------+
-                 |
-                 | Tra cứu Page Table
-                 v
-        Physical Address
-           0x12345000
-                 |
-                 v
-                RAM
-```
-
-Đây là sơ đồ minh họa đơn giản. Các địa chỉ trên chỉ mang tính ví dụ, không đại diện cho một ánh xạ thực tế cụ thể.
-
-> [!NOTE]
-> **Điểm cần nhớ:** Chương trình thông thường sử dụng địa chỉ ảo. MMU và Page Table phối hợp để thực hiện quá trình dịch địa chỉ khi CPU truy cập bộ nhớ. Chương trình không cần trực tiếp biết địa chỉ vật lý tương ứng với địa chỉ ảo của mình.
-
-**Cho ví dụ**, khi chương trình C khai báo một biến:
+Quá trình này là quá trình đầu tiên, khi tiến hành biên dịch từ mã C tới mã máy mà máy tính có thể hiểu được compiler chèn in nguyên cái mã nguồn của các file tiêu đề ví dụ như (stdio.h, string.h v.v.) ở trên đầu logic C. Ví dụ :
 
 ```c
-int number = 100;
+#include <stdio.h>
+
+int main(void){
+	printf("hello world\n");
+	return 0;
+}
 ```
 
-Nếu biến được lưu trong bộ nhớ, địa chỉ lấy được thông qua `&number` trong chương trình thông thường là địa chỉ ảo thuộc không gian địa chỉ của tiến trình.
+trong khi tiêu đề (stdio.h) có khai báo `printf()`. Giả sử header có khai báo minh họa của `printf()` là :
+
+```header
+void printf(int a, int b, int c); //ví dụ minh họa
+/*
+Các hàm khác
+*/
+```
+
+thì khi compiler làm việc thực hiện quá trình đầu tiên thì kết quả sẽ như này:
 
 ```c
-printf("%p\n", (void *)&number);
+void printf(int a, int b, int c); //ví dụ minh họa
+/*
+Các hàm khác
+*/
+
+int main(void){
+	printf("hello world\n");
+	return 0;
+}
 ```
 
-Giá trị được in ra không phải địa chỉ vật lý của ô RAM đang chứa biến `number`. Nó là địa chỉ mà chương trình sử dụng để tham chiếu đến biến đó.
+Ta thấy, nó chèn in nguyên cái mã nguồn của file tiêu đề vào cái phần `include`, cái ta `import` các thư viện vào để dùng các hàm như `printf()` hay `scanf()`. Ở quy trình đầu tiên preprocessing này nó có thể xử lý các thẻ như :
 
-Cần lưu ý rằng trình biên dịch có thể tối ưu biến vào thanh ghi hoặc loại bỏ việc lưu biến trong bộ nhớ nếu không cần thiết. Vì vậy, ví dụ trên chỉ minh họa trường hợp biến thực sự được lưu trong bộ nhớ.
+```c
+#include
+#define
+#if
+#ifdef
+...
+```
 
-#### 1.1.2. Phân biệt Memory Mapping, Virtual Address và Physical Address
+preprocessor thực hiện việc include nội dung header theo cơ chế của preprocessor, sau đó tạo ra translation unit đã được xử lý. Để có thể dừng ở phần đầu tiên và dump ra một file có thể cho ta xem toàn bộ quy trình kết quả sau khi preprocessing thực hiện hoàn tất, ta dùng lệnh `gcc -E main.c -o main.i` lệnh này ra lệnh cho compiler là khi thực hiện xong quy trình đầu tiên, thay vì biên dịch ra hay tới các quy trình khác thì hãy lưu kết quả của quy trình preprocessing vào file `main.i`, khi đó `main.i` là nơi chứa sản phẩm sau khi quy trình đầu tiên hoàn tất. Ta có thể truy cập vào file `main.i` để xem sản phẩm
 
-Dựa trên các khái niệm đã trình bày, ta có thể phân biệt chúng như sau:
+#### 1.2.2 Compilation
 
-<div align="center">
+Quá trình thứu 2 kế tiếp sau khi thực hiện qua quá trình preprocessing, quá trình này Compiler dịch mã C thành assembly, với cú pháp phụ thuộc vào compiler/option; GCC có thể xuất assembly theo AT&T hoặc Intel syntax. Ví dụ với at&t :
 
-| Khái niệm | Bản chất | Vai trò |
-|---|---|---|
-| Memory Mapping | Cơ chế thiết lập quan hệ ánh xạ giữa một vùng địa chỉ ảo với bộ nhớ hoặc đối tượng được ánh xạ | Cho phép tiến trình truy cập bộ nhớ hoặc dữ liệu thông qua địa chỉ ảo |
-| Virtual Address (VA) | Địa chỉ thuộc không gian địa chỉ ảo của tiến trình | Được chương trình sử dụng để tham chiếu đến dữ liệu hoặc mã lệnh |
-| Physical Address (PA) | Địa chỉ thuộc không gian địa chỉ vật lý | Được sử dụng trong quá trình truy cập bộ nhớ vật lý sau khi địa chỉ được dịch thành công |
+```asm
+main:
+    pushq   %rbp
+    movq    %rsp, %rbp
+    movl    $10, -4(%rbp)
+    movl    $20, -8(%rbp)
+    movl    -4(%rbp), %eax
+    addl    -8(%rbp), %eax
+    popq    %rbp
+    ret
+```
 
-</div>
+lúc này nó vẫn chưa phải mã thực thi, nó vẫn là hợp ngữ cho con người đọc được. Tác dụng nếu ta có thể hiểu sâu về phần này thì chúng ta cũng có thể ra lệnh compiler dump ra dạng mã ở quy trình bước 2 này để debug cũng là một ý tưởng khá hay ta có thể dùng lệnh `gcc -S main.c -o main.s`, lệnh này sẽ cho compiler biên dịch tới quá trình bước 2 ra một file, khi đó ta sẽ thấy được mã hợp ngữ được biên dịch từ C đầu vào qua
 
-Memory Mapping và Virtual Address không phải hai cách gọi của cùng một khái niệm. Virtual Address là một loại địa chỉ, trong khi Memory Mapping là cơ chế thiết lập và quản lý quan hệ ánh xạ.
+#### 1.2.3 Assembling
 
-Tương tự, Physical Address không phải bản thân RAM. Địa chỉ vật lý là địa chỉ trong không gian địa chỉ vật lý; RAM là một loại bộ nhớ vật lý mà hệ thống có thể truy cập thông qua cơ chế địa chỉ này.
+Quá tình này là quá trình số 3, ở đây Assembler sẽ dịch assembly thành machine-code bytes và tạo object file ở quy tình vừa rồi ở bước 2 sang mã máy vào một file object `(assembly -> .o files)`, file có đuôi `.o` này là một file chưa các mã máy được biên dịch từ hợp ngữ nên, thường là một ELF relocatable object trên Linux x86-64. Ta có thể kiểm tra qua lệnh `file` trên linux
 
-Trong hệ thống phân trang, quan hệ giữa địa chỉ ảo và địa chỉ vật lý được quản lý thông qua Page Table. Tuy nhiên, không phải mọi địa chỉ ảo đều luôn có một trang RAM vật lý tương ứng tại mọi thời điểm. Một vùng địa chỉ ảo có thể tồn tại mà các trang của nó chưa được cấp phát vật lý hoặc chưa có ánh xạ vật lý hiện hữu.
+Chúng ta có thể xem file dạng này với lệnh chẳng hạn như `gcc -c main.c -o main.o`, lệnh này ra lệnh cho compiler là thực hiện xong quy trình 3 là biên dịch hợp ngữ ra một file đuôi `.o` chẳng hạn `main.o`, hoặc chúng ta đã có file hợp ngữ như đã dùng lệnh `gcc -S main.c -o main.s` ở bước vừa rồi thì ta dùng lệnh `as main.s -o main.o` để biên dịch chúng ra, khi có file `.o` chẳng hạn `main.o` thì ta có thể dùng `objdump -d main.o` để xem machine code chẳng hạn như :
 
-#### 1.1.3. Mối quan hệ giữa phần mềm và địa chỉ bộ nhớ
+```
+48 89 e5
+48 83 ec 10
+c7 45 fc 0a 00 00 00
+```
 
-Trên các hệ điều hành hiện đại sử dụng bộ nhớ ảo, chương trình thông thường hoạt động dựa trên không gian địa chỉ ảo do hệ điều hành cung cấp. Điều này có nghĩa là chương trình không cần quản lý trực tiếp vị trí vật lý của dữ liệu trong RAM. Khi chương trình truy cập một địa chỉ ảo, phần cứng và hệ điều hành phối hợp để xử lý việc dịch địa chỉ, quản lý quyền truy cập và xử lý các trường hợp cần thiết như Page Fault.
+Đây mới là những byte machine code tương ứng với các instruction.
 
-Vì vậy, không nên nói rằng phần mềm luôn nghĩ địa chỉ ảo chính là địa chỉ vật lý. Chính xác hơn, chương trình thông thường chỉ cần làm việc với địa chỉ trong không gian địa chỉ mà nó được cấp; việc ánh xạ sang địa chỉ vật lý được hệ thống quản lý phía dưới.Đây là một trong những nền tảng quan trọng của cơ chế Memory Mapping trên Linux.
+#### 1.2.4 Linking
 
-### 1.2. `mmap()` là gì?
+Khi đã biên dịch ra một file `.o` rồi, thì đây là bước 4 kế tiếp, một chương trình thực tế thường ko chỉ chứa code của `main.c` mà nó còn liên kết nhiều thư viện bên ngoài. Nên phần này góp phần để liên kết các nguồn logic bên ngoài ở các thư viện đã được import ở nguồn vào file nhị phân. Sau bước này, chương trình ko chỉ chứa code của `main.c` mà còn liên kết nhiều nguồn code khác như
 
-`mmap()` (*memory mapping*) là một API trên Linux cho phép chương trình yêu cầu kernel thiết lập một vùng ánh xạ trong không gian địa chỉ ảo của tiến trình.
+```
+main.o
+   │
+   │ static linker
+   ▼
+executable
+   │
+   ├── PLT
+   ├── GOT
+   ├── dynamic section
+   └── DT_NEEDED → libc.so
+                     │
+                     ▼
+              dynamic linker
+                     │
+                     ▼
+             symbol resolution
+```
 
-Thông qua `mmap()`, chương trình có thể tạo vùng bộ nhớ ẩn danh (*anonymous mapping*), ánh xạ nội dung của file vào bộ nhớ (*file-backed mapping*), hoặc thiết lập vùng bộ nhớ phục vụ những mục đích khác.
+> Với dynamically linked executable
+
+Executable main vẫn chứa machine code, nhưng đồng thời còn có nhiều thành phần khác của ELF như section, symbol, relocation information, dynamic linking information,...
+
+#### 1.2.5 CPU thực thi machine code
+
+Sau khi hoàn tất quy trình bước 4 là linking, thực tế file output là Executable ELF thực thi hoàn chỉnh có thể thực thi được, tuy nhiên ko phải cứ nhập lệnh `./main` là hệ điều hành chọi nguyên dàn mã trong file vô cho CPU xử lý, còn vài bước mà hệ điều hành cần làm để có thể thực thi một file hoàn chỉnh thế này đó là
+
+```
+ELF executable
+      │
+      ▼
+OS loader
+      |
+      |── đọc ELF headers
+      |── tạo process address space
+      |── map các loadable segments
+      |── thiết lập permissions
+      |── thiết lập entry point
+      │
+      ▼
+Virtual Address Space
+      │
+      │   page tables
+      │   VPN → PFN
+      ▼
+CPU bắt đầu tại entry point
+      │
+      ▼
+   Fetch
+      ↓
+   Decode
+      ↓
+   Execute
+      ↓
+	 ...
+```
 
 > [!IMPORTANT]
-> **Điểm quan trọng:** `mmap()` không đơn thuần là hàm cấp phát RAM. Nó yêu cầu kernel thiết lập một vùng ánh xạ và các thông tin quản lý liên quan trong không gian địa chỉ ảo của tiến trình. Việc cấp phát hoặc ánh xạ các trang bộ nhớ vật lý có thể diễn ra sau đó, tùy thuộc vào loại ánh xạ và cách chương trình truy cập bộ nhớ.
+> **Điều quan trọng:** Ở đây, CPU nó ko đọc từng byte,bit trực tiếp trong file nó chỉ thực thi instruction bytes nằm trong memory.
 
-Ví dụ, khi chương trình yêu cầu ánh xạ 1 MiB bộ nhớ ẩn danh, kernel có thể thiết lập vùng địa chỉ ảo trước mà chưa cần cấp phát ngay toàn bộ các trang vật lý tương ứng.
+Cho một ví dụ như sau :
 
-Khi chương trình truy cập một trang chưa có ánh xạ vật lý phù hợp, CPU có thể phát sinh *page fault*. Kernel sẽ xử lý tình huống này và quyết định cách cung cấp trang bộ nhớ phù hợp.
+```
+ELF file:
 
-> Cơ chế cấp phát hoặc đưa trang bộ nhớ vào RAM khi cần thiết có liên quan đến *demand paging* và *page fault*. Tuy nhiên, không phải mọi page fault đều có nghĩa là kernel phải cấp phát một trang RAM mới.
-
-### 1.3. `munmap()` là gì?
-
-`munmap()` (*memory unmapping*) là một API trên Linux cho phép chương trình yêu cầu kernel gỡ bỏ ánh xạ bộ nhớ trong một phạm vi địa chỉ ảo được chỉ định. Thông qua `munmap()`, chương trình có thể gỡ bỏ toàn bộ hoặc một phần của một vùng ánh xạ hiện có, miễn là các tham số đáp ứng yêu cầu của hệ thống.
-
-Sau khi `munmap()` thành công, phạm vi địa chỉ được gỡ bỏ không còn khả dụng thông qua ánh xạ đó. Nếu chương trình tiếp tục truy cập địa chỉ thuộc phạm vi đã gỡ bỏ, việc truy cập có thể gây ra lỗi truy cập bộ nhớ, chẳng hạn như `SIGSEGV`.
-
-Việc gỡ bỏ ánh xạ cũng không nhất thiết đồng nghĩa với việc toàn bộ tài nguyên vật lý liên quan lập tức được giải phóng. Các trang vật lý có thể vẫn được sử dụng hoặc tham chiếu bởi những ánh xạ hay thành phần khác của hệ thống.
-
-### 1.4. Mối quan hệ giữa `mmap()` và `munmap()`
-
-Hai API này có vai trò đối ứng trong việc quản lý vòng đời của một vùng ánh xạ bộ nhớ.
-
-<div align="center">
-
-| `mmap()` | `munmap()` |
-|---|---|
-| Yêu cầu thiết lập vùng ánh xạ. | Yêu cầu gỡ bỏ ánh xạ trong phạm vi địa chỉ được chỉ định. |
-| Trả về địa chỉ bắt đầu của vùng ánh xạ khi thành công. | Trả về `0` khi thành công, hoặc `-1` khi thất bại. |
-| Cho phép chương trình sử dụng vùng địa chỉ ảo đã ánh xạ. | Làm cho phạm vi địa chỉ đã gỡ bỏ không còn khả dụng thông qua ánh xạ đó. |
-
-</div>
-
-Có thể hình dung mối quan hệ giữa hai API như sau:
-
-```text
-                 mmap()
-                   |
-                   v
-       +------------------------+
-       | Thiết lập vùng ánh xạ  |
-       | trong không gian VA    |
-       +------------------------+
-                   |
-                   v
-       +------------------------+
-       | Chương trình truy cập  |
-       | vùng địa chỉ đã ánh xạ |
-       +------------------------+
-                   |
-                   v
-                munmap()
-                   |
-                   v
-       +------------------------+
-       | Gỡ bỏ ánh xạ trong     |
-       | phạm vi được chỉ định  |
-       +------------------------+
+.text
+--------------------------------
+b8 3c 00 00 00
+bf 01 00 00 00
+0f 05
+--------------------------------
+          ↓ loader
+RAM / virtual address space
+          ↓
+   RIP = 0x401000
+          ↓
+     CPU fetch:
+   b8 3c 00 00 00
+          ↓
+       decode:
+     mov eax, 0x3c
+          ↓
+       execute
 ```
 
-**Lưu ý:** Sơ đồ trên mô tả vòng đời khái quát. Một vùng ánh xạ có thể bị gỡ bỏ một phần, và việc gỡ bỏ một mapping không nhất thiết giải phóng ngay toàn bộ các trang vật lý liên quan.
+Nghĩa là, khi dùng lệnh `./main`, các lệnh trong file ELF vốn đã được cấu trúc `.text, .data, .rodata v.v..` trước đó, nó là sản phẩm compiled, khi chương trình được khởi chạy, OS loader sẽ tạo address space cho process và map các loadable segments của ELF vào virtual address space. Các section như `.text`, `.data`, `.rodata` là khái niệm của ELF, loader chủ yếu làm việc với program headers / loadable segments, không đơn giản nạp từng section vào memory, với kernel thì vùng nhớ này được sắp xếp bởi page table ánh xạ virtual page number (VPN) sang physical frame number (PFN), cùng với các permission/status bits. Sau khi nạp xong vào vmem, CPU sẽ tiến hành xuất phát tại entry point (_start), theo sơ đồ minh họa entry point ở vaddr là `0x401000` và CPU tiến hành tại đây.
 
-### 1.5. Virtual Memory và Physical Memory
+Tiếp đến là fetch. Fetch là quá trình CPU lấy các byte của instruction từ memory dựa trên địa chỉ hiện tại trong RIP, đưa chúng vào các thành phần bên trong CPU để tiếp tục xử lý, có thể hình dung thế này :
 
-Để hiểu sâu hơn cách `mmap()` và `munmap()` hoạt động, cần phân biệt bộ nhớ ảo (*Virtual Memory*) với bộ nhớ vật lý (*Physical Memory*).
-
-**Virtual Memory** là cơ chế cung cấp cho tiến trình một không gian địa chỉ ảo. Chương trình sử dụng các địa chỉ trong không gian này để tham chiếu đến mã lệnh và dữ liệu.
-
-**Physical Memory** là bộ nhớ vật lý của hệ thống, thường được hiện thực bằng RAM. Khi CPU truy cập bộ nhớ, phần cứng quản lý bộ nhớ sử dụng các cấu trúc dịch địa chỉ để chuyển địa chỉ ảo thành địa chỉ vật lý phù hợp.
-
-Trên Linux, mỗi tiến trình thông thường có không gian địa chỉ ảo riêng. Kernel quản lý các vùng địa chỉ này và thiết lập các thuộc tính cần thiết để kiểm soát cách chương trình sử dụng chúng.
-
-Quá trình dịch địa chỉ có thể được mô tả khái quát như sau:
-
-```text
-             Tiến trình
-                  |
-                  v
-          Virtual Address
-                  |
-                  v
-         +----------------+
-         |      MMU       |
-         | Address        |
-         | Translation    |
-         +----------------+
-                  |
-                  | Tra cứu Page Table
-                  v
-          Physical Address
-                  |
-                  v
-                 RAM
+```
+RAM / Virtual Memory
+────────────────────────────────
+0x401000:  b8
+0x401001:  3c
+0x401002:  00
+0x401003:  00
+0x401004:  00
+0x401005:  bf
+...
+────────────────────────────────
+                ▲
+                │
+             Fetch
+                │
+                │
+               CPU
 ```
 
-Sơ đồ trên mô tả trường hợp địa chỉ ảo được dịch thành công sang địa chỉ vật lý. Trên thực tế, không phải mọi địa chỉ ảo thuộc một vùng đã được thiết lập đều luôn có trang vật lý tương ứng hiện diện trong RAM.
+Trong reverse, ta cũng đã quen thuộc với RIP là một thanh ghi đặc biệt giữ địa chỉ của instruction tiếp theo mà CPU sẽ thực thi, ở đây như đã nói ở trên thì thanh ghi RIP hiện tại là đang ở vaddr `0x401000`, lúc này CPU biết instruction tiếp theo bắt đầu tại địa chỉ `0x401000`. Nếu `RIP=0x401000` thì CPU sẽ cần phải fetch để lấy instruction trong vmem về phía mình. Có thể hình dung :
 
-Chẳng hạn, một vùng bộ nhớ ẩn danh được tạo bằng `mmap()` có thể tồn tại trong không gian địa chỉ ảo trước khi tất cả các trang của nó được cấp phát hoặc ánh xạ vật lý.
-
-Khi chương trình truy cập bộ nhớ, nếu việc truy cập cần đến một trang chưa có ánh xạ phù hợp, CPU có thể phát sinh *page fault*. Kernel xử lý lỗi trang dựa trên trạng thái của vùng nhớ, loại ánh xạ và các điều kiện liên quan.
-
-Vì vậy, cần phân biệt ba khái niệm:
-
-| Khái niệm | Vai trò |
-|---|---|
-| Virtual Memory | Cơ chế quản lý và cung cấp không gian địa chỉ ảo cho tiến trình. |
-| Physical Memory | Bộ nhớ vật lý mà hệ thống sử dụng để lưu trữ dữ liệu và mã lệnh khi cần. |
-| Memory Mapping | Cơ chế thiết lập mối quan hệ giữa vùng địa chỉ ảo với bộ nhớ hoặc đối tượng được ánh xạ. |
-
-Trong bối cảnh này, `mmap()` là API để chương trình yêu cầu kernel thiết lập một vùng ánh xạ, còn `munmap()` là API để yêu cầu gỡ bỏ ánh xạ đó trong một phạm vi nhất định.
-
-### 1.6. Vòng đời của một Memory Mapping
-
-Một vùng ánh xạ bộ nhớ trên Linux có thể trải qua nhiều giai đoạn, từ lúc chương trình yêu cầu tạo mapping cho đến khi ánh xạ bị gỡ bỏ.
-
-#### 1.6.1. Yêu cầu thiết lập ánh xạ
-
-Chương trình gọi `mmap()` với các tham số xác định địa chỉ đề xuất, kích thước, quyền truy cập, loại ánh xạ và thông tin file nếu cần.
-
-Kernel kiểm tra các tham số và điều kiện liên quan. Nếu yêu cầu hợp lệ, kernel thiết lập vùng địa chỉ ảo tương ứng và trả về địa chỉ bắt đầu của vùng ánh xạ.
-
-#### 1.6.2. Kernel quản lý vùng địa chỉ ảo
-
-Kernel quản lý vùng địa chỉ này thông qua các cấu trúc dữ liệu bộ nhớ ảo. Trên Linux, `vm_area_struct` mô tả một vùng địa chỉ ảo có các thuộc tính quản lý liên quan; vùng này thường được gọi là VMA (*Virtual Memory Area*).
-
-Thông tin VMA có thể bao gồm phạm vi địa chỉ, quyền truy cập và các thông tin liên quan đến loại ánh xạ.
-
-Việc một VMA tồn tại không có nghĩa mọi trang trong phạm vi của nó đều đã được ánh xạ đến các trang vật lý trong RAM.
-
-#### 1.6.3. Chương trình truy cập vùng ánh xạ
-
-Sau khi `mmap()` thành công, chương trình có thể sử dụng địa chỉ được trả về để truy cập bộ nhớ, trong giới hạn quyền truy cập đã thiết lập. Tùy thuộc vào loại ánh xạ và trạng thái hiện tại, việc truy cập có thể sử dụng ánh xạ trang đã tồn tại hoặc phát sinh *page fault* để kernel xử lý.
-
-Ví dụ, với một vùng bộ nhớ ẩn danh, kernel có thể cung cấp trang vật lý khi chương trình lần đầu truy cập một trang chưa được cấp phát theo cơ chế của hệ thống.
-
-#### 1.6.4. Gỡ bỏ ánh xạ
-
-Khi không còn cần vùng bộ nhớ, chương trình có thể gọi `munmap()` để yêu cầu kernel gỡ bỏ ánh xạ trong phạm vi tương ứng. Kernel cập nhật các cấu trúc quản lý bộ nhớ và xử lý những ánh xạ trang liên quan. Nếu chỉ gỡ bỏ một phần của vùng ánh xạ, phần còn lại có thể tiếp tục tồn tại.
-
-Các trang vật lý liên quan chỉ được giải phóng khi không còn cần thiết và không còn được tham chiếu theo các cơ chế quản lý bộ nhớ của hệ thống. Có thể tóm tắt vòng đời như sau:
-
-```text
-        Chương trình gọi mmap()
-                  |
-                  v
-       Kernel thiết lập mapping
-                  |
-                  v
-       Vùng địa chỉ ảo tồn tại
-                  |
-                  v
-       Chương trình truy cập
-           vùng ánh xạ
-                  |
-                  v
-       Có thể phát sinh page fault
-           nếu cần xử lý trang
-                  |
-                  v
-       Chương trình gọi munmap()
-                  |
-                  v
-       Kernel gỡ bỏ ánh xạ
-       trong phạm vi yêu cầu
+```
+RIP
+ │
+ │ 0x401000
+ ▼
+Memory
+0x401000: b8
+0x401001: 3c
+0x401002: 00
+0x401003: 00
+0x401004: 00
 ```
 
-Vòng đời thực tế phụ thuộc vào loại ánh xạ, trạng thái các trang, việc chia sẻ tài nguyên và các hoạt động quản lý bộ nhớ khác. Vì vậy, không nên hiểu rằng mỗi lần gọi `mmap()` đều lập tức cấp phát RAM, hoặc mỗi lần gọi `munmap()` đều lập tức giải phóng toàn bộ RAM liên quan.
+> Để đơn giản hóa mô hình, ta giả sử CPU fetch đủ 5 byte cần thiết cho instruction này.
 
-## 2. Cơ chế hoạt động ở User Space
-### 2.1. Khai báo và Prototype của `mmap()`
-
-Prototype của `mmap()` là các tiền tố, tham số khai báo của hàm `mmap()`:
-
-<p align="center">
-<img src="image/image0.png" alt="prototype mmap()">
-</p>
-
-các kiểu dữ liệu quan trọng trong prototype:
-
-<div align="center">
-
-| Thành phần | Ý nghĩa |
-|---|---|
-| `void *` | Kiểu con trỏ tổng quát; ở đây là kiểu giá trị trả về, dùng để biểu diễn địa chỉ bắt đầu của vùng ánh xạ. |
-| `size_t` | Kiểu số nguyên không dấu dùng để biểu diễn kích thước. |
-| `int` | Kiểu dữ liệu dùng cho các tham số `prot` và `flags`. |
-| `off_t` | Kiểu dữ liệu dùng để biểu diễn offset trong file. |
-
-</div>
-
-**Lưu ý:** `mmap()` là API được khai báo trong thư viện C trên Linux, lời gọi này thường được thực hiện thông qua system call tương ứng để yêu cầu kernel xử lý.
-
-### 2.2. Các tham số của `mmap()`
-
-`mmap()` bao gồm có 6 tham số, ta xét bảng sau :
-
-<div align="center">
-
-| Tham số | Chức năng |
-|---|---|
-| `addr` | Địa chỉ ảo đề xuất cho vùng ánh xạ. |
-| `length` | Kích thước vùng ánh xạ tính bằng byte. |
-| `prot` | Quy định các quyền truy cập bộ nhớ được yêu cầu. |
-| `flags` | Xác định loại ánh xạ và các thuộc tính liên quan. |
-| `fd` | File descriptor của đối tượng file cần ánh xạ, nếu có. |
-| `offset` | Vị trí bắt đầu trong file cần ánh xạ. |
-
-</div>
-
-Từ bảng này, ta có thể nhóm tham số theo chức năng: vị trí và kích thước (`addr`, `length`), quyền truy cập (`prot`), loại ánh xạ (`flags`) và thông tin file (`fd`, `offset`).
-
-### 2.3. `addr` và `length`
-
-tham số `addr` là địa chỉ ảo mà chương tình đề xuất làm địa chỉ bắt đầu của vùng ánh xạ. Ở đây, chúng ta có hai trường hợp:
-- **Trường hợp 1:** Là cung cấp vào cho tham số `addr` là `NULL`, ví dụ `mmap(NULL,...)` thì điều này chương trình sẽ cho kernel tùy chọn địa chỉ ảo phù hợp để bắt đầu của vùng ánh xạ mà ko có đề xuất gì hết
-- **Trường hợp 2:** Là cung cấp vào cho tham số `addr` là một địa chỉ ảo nào đó ví dụ `0xf000f123` như `mmap(0xf000f123,...)` thì điều này chương trình sẽ đề xuất địa chỉ `0xf000f123` cho kernel để làm địa chỉ ảo bắt đầu của vùng ánh xạ
+Nó sẽ đọc các byte trong bộ nhớ ảo (vmem) vào hệ thống CPU, kết quả sẽ là `b8 3c 00 00 00` đó là fetch. Chưa cần phải biết nó biên dịch ra hợp ngữ là sao
 
 > [!IMPORTANT]
-> **Lưu ý:** địa chỉ `0xf000f123` chỉ thuộc dạng đề xuất, khi chương trình thực thi ko thể đảm bảo nó hoạt động, nghĩa là địa chỉ `0xf000f123` sẽ ko đảm bảo luôn là làm địa chỉ ảo bắt đầu của vùng ánh xạ. Vì kernel có thể chọn các địa chỉ khác
-
-Ví dụ minh họa, nếu dùng `NULL` truyền vào tham số `addr` thì kernel có thể trả về địa chỉ `0x7f100000`:
-
-```
-Không gian địa chỉ ảo của tiến trình
-
-0x7f0fffff  ───────────────
-0x7f100000  ┌──────────────┐  ◄── mem
-            │              │
-            │   Mapping    │
-            │              │
-0x7f100fff  └──────────────┘
-0x7f101000  ───────────────
-```
-
-Địa chỉ trên chỉ là ví dụ, không phải địa chỉ cố định mà `mmap()` luôn trả về. Còn về trường hợp 2 là trường hợp gắn một địa chỉ vào tham số `addr` để chương trình đề xuất thì trong cách sử dụng thông thường, địa chỉ được gán thẳng vào tham số `addr` chỉ là gợi ý cho kernel. Kernel có thể chọn địa chỉ khác nếu không thể sử dụng địa chỉ được đề xuất. Các cờ đặc biệt như `MAP_FIXED` và `MAP_FIXED_NOREPLACE` thay đổi cách xử lý địa chỉ này. Chúng có ngữ nghĩa riêng và cần được hiểu kỹ trước khi sử dụng.
-
-> [!NOTE]
-> **Điểm cần nhớ:** `addr` không phải địa chỉ vật lý của RAM. Đây là địa chỉ thuộc không gian địa chỉ ảo của tiến trình.
-
-Còn tham số `length` xác định kích thước vùng ánh xạ mà chương trình yêu cầu, tính bằng byte. **Ví dụ**, cho đoạn `mmap(NULL, 4096,...)`, trong đó tham số `addr` là `NULL` nên kernel sẽ chọn địa chỉ bắt đầu để ánh xạ, tham số `length` là `4096` tương đương `4` KiB
-
-vậy nghĩa của cái này trước tiên là yêu cầu ánh xạ một vùng có kích thước `4096` byte, tương đương `4` KiB. Giả sử kernel trả về địa chỉ bắt đầu 0x7f100000, vùng địa chỉ được yêu cầu có thể minh họa như sau:
-
-```
-Địa chỉ bắt đầu                       Địa chỉ cuối
-     0x7f100000                          0x7f100fff
-          │                                   │
-          ▼                                   ▼
-          ┌───────────────────────────────────┐
-          │                                   │
-          │       4096 bytes = 4 KiB          │
-          │                                   │
-          └───────────────────────────────────┘
-```
-
-Cách tính địa chỉ cuối của vùng có kích thước length là `last vaddr = addr + length - 1` vậy suy ra từ ví dụ trên, ta xét `0x7f100000 + 4096 - 1 = 0x7f100fff`
-
-**Lưu ý:** Đây là địa chỉ cuối của phạm vi byte được minh họa; trong C, thông thường người ta biểu diễn phạm vi bộ nhớ bằng khoảng nửa mở `[addr, addr + length)`. Nghĩa là địa chỉ bắt đầu được tính vào phạm vi, còn địa chỉ ngay sau vùng ánh xạ thì không.
-
-- **`length` có bắt buộc là bội số của kích thước trang không?:** Không. `length` không nhất thiết phải là bội số của kích thước trang. **Ví dụ** cho đoạn code `size_t length = 1000;`
-
-  Chương trình có thể yêu cầu ánh xạ 1000 byte. Kernel quản lý ánh xạ theo các đơn vị trang và các quy tắc liên quan, nên phạm vi được quản lý có thể bao phủ nhiều byte hơn kích thước yêu cầu sau khi làm tròn theo ranh giới trang.
-
-  Điều này không có nghĩa chương trình được phép tùy ý truy cập vượt quá phạm vi ánh xạ mà nó yêu cầu.
-
-`addr` và `length` là hai tham số có mối quan hệ mật thiết với nhau vì hai tham số này xác định phạm vi địa chỉ ảo mà chương trình muốn sử dụng. Tham số `addr` là đề xuất hoặc để kernel chọn nếu là `NULL` một địa chỉ ảo bắt đầu của vùng ánh xạ, tham số `length` là xác định kích thước vùng ánh xạ mà chương trình yêu cầu, tính bằng byte. Khi đầy đủ hai tham số này, ta có thể tính ra `last vaddr` (địa chỉ ảo kết thúc của vùng ánh xạ)
-
-### 2.4. `prot` và quyền truy cập bộ nhớ
-
-tham số `prot` (protection) xác định các quyền truy cập mà một vùng bộ nhớ được phép có trong không gian địa chỉ ảo của tiến trình. Nói cách khác, prot cho biết CPU được phép đọc, ghi hoặc thực thi dữ liệu trong vùng bộ nhớ đó. Linux cung cấp các hằng số `prot` sau trong `<sys/mman.h>` :
-
-<div align="center">
-
-| Hằng số | Giá trị | Ý nghĩa |
-|---|---:|---|
-| `PROT_READ` | `0x1` | Cho phép đọc dữ liệu |
-| `PROT_WRITE` | `0x2` | Cho phép ghi dữ liệu |
-| `PROT_EXEC` | `0x4` | Cho phép thực thi lệnh máy |
-| `PROT_NONE` | `0x0` | Không cho phép truy cập thông thường |
-
-</div>
-
-Các quyền này có thể kết hợp bằng toán tử bitwise OR (`|`). **Ví dụ**, `PROT_READ | PROT_WRITE` tương đương `0x1 | 0x2 = 0x3`, Vì vậy, `prot = 3` có nghĩa là vùng bộ nhớ được cấp quyền đọc và ghi.
-
-> [!NOTE]
-> **Lưu ý:** `PROT_NONE` có giá trị bằng `0`, nên không thể kết hợp nó với các quyền khác để tạo thành một tập quyền có ý nghĩa.
-
-#### 2.4.1. `prot` hoạt động như thế nào?
-
-để hiểu cách `prot` hoạt động, trước hết ta cần xét lời gọi `mmap()` như sau:
-
-```c
-void *mem = mmap(
-    NULL,
-    4096,
-    PROT_READ | PROT_WRITE,
-    MAP_PRIVATE | MAP_ANONYMOUS,
-    -1,
-    0
-);
-```
-
-Ở đây ta có `PROT_READ | PROT_WRITE` là `prot` của lời gọi `mmap()`, nghĩa là khi cái hàm này nó cấp một vùng địa chỉ bắt đầu của vùng ánh xạ có kích thước 4KiB do kernel chỉ định, thì cái vùng ánh xạ đó nó được phép chế độ đọc-ghi. Giả sử `mmap()` trả về địa chỉ ảo `mem = 0x7ffff7f8f000`, sau đó, chương trình thực hiện:
-
-```c
-*(int *)mem = 123;
-int value = *(int *)mem;
-```
-
-Quá trình truy cập diễn ra như sau, đầu tiên là ghi dữ liệu `mov DWORD PTR [rax], 0x7b`, lúc này CPU ghi giá trị `123` vào địa chỉ ảo mà `RAX` đang giữ. Tiếp theo là đọc dữ liệu `mov eax, DWORD PTR [rax]`, CPU đọc 4 byte từ địa chỉ ảo đó vào thanh ghi `EAX`. Cả hai thao tác đều phù hợp với quyền `PROT_READ | PROT_WRITE`.
-
-- **Nếu quyền truy cập không phù hợp thì sao?:** Ví dụ, vùng bộ nhớ chỉ được cấp quyền đọc `PROT_READ`. Nếu chương trình cố ghi vào vùng này, CPU có thể phát sinh `page fault` do vi phạm quyền truy cập. Kernel xử lý ngoại lệ, nếu truy cập vẫn không hợp lệ, chương trình thường nhận `SIGSEGV`.
-
-  Tương tự, nếu vùng nhớ không có quyền `PROT_EXEC`, việc lấy lệnh máy từ vùng đó để thực thi thông thường sẽ bị ngăn chặn. Tuy nhiên, cần phân biệt hai trường hợp:
-  - **Page fault không đồng nghĩa với lỗi chương trình:** nó cũng có thể xảy ra khi CPU truy cập một trang chưa được đưa vào RAM và kernel có thể xử lý thành công.
-  - **Vi phạm quyền truy cập:** nếu thao tác không được phép và kernel không thể xử lý nó như một truy cập hợp lệ, tiến trình thường bị gửi SIGSEGV.
+> **Điều quan trọng:** `RIP=0x401000` không có nghĩa CPU đọc đúng 5 byte ngay lập tức vì hardware thực tế không nhất thiết thực hiện một memory read đúng 5 byte vì nó biết trước instruction dài 5 byte.
+>
+> CPU hiện đại thường fetch instruction bytes theo cache lines / fetch blocks lớn hơn nhiều, sau đó instruction decoder xác định boundary của từng instruction.
 
 <details>
-	<summary><b>[Thực hành]</b> Debug để bắt và phát hiện lỗi quyền truy cập ko phù hợp trong GDB</summary>
+	<summary><b>[Câu hỏi]</b> Vì sao CPU cần phải fetch?</summary>
 <table>
 <tr>
 <td>
 
 ---
 
-Ta cho đoạn code sau :
+CPU cần fetch vì instruction bytes trong memory chỉ là dữ liệu được lưu trữ, CPU phải lấy chúng vào quá trình xử lý thì mới có thể decode và execute instruction. Có thể hiểu theo trình tự sau:
+- **1.Fetch:** Lấy instruction bytes từ memory dựa trên địa chỉ thực thi hiện tại.
+- **2.Decode:** Giải mã các byte để xác định instruction, toán hạng và cách thực thi.
+- **3.Execute:** Thực hiện thao tác mà instruction yêu cầu.
+
+Ví dụ với instruction `mov eax, 0x3c`, machine code tương ứng `B8 3C 00 00 00`. Giả sử instruction bắt đầu tại địa chỉ `0x401000`.
+
+- **Trước fetch:** Các byte `B8 3C 00 00 00` nằm trong memory. CPU chưa thể thực thi instruction này nếu chưa lấy và xử lý mã lệnh tương ứng.
+- **Fetch:** CPU lấy instruction bytes từ hệ thống bộ nhớ vào pipeline xử lý instruction.
+- **Decode:** CPU xác định `B8` là opcode của dạng `MOV r32, imm32` và các byte tiếp theo biểu diễn immediate `0x0000003C`.
+- **Execute:** CPU ghi giá trị `0x3C` vào thanh ghi `EAX`.
+
+- **Vì sao CPU không execute trực tiếp từ memory?:** Vì memory lưu trữ instruction bytes, còn CPU có các bộ phận chuyên trách để giải mã và thực thi chúng. CPU không coi một dãy byte bất kỳ là một thao tác đã được thực hiện. Ngoài ra, instruction có độ dài thay đổi trên x86-64, từ 1 đến 15 byte. CPU phải xác định ranh giới instruction khi giải mã, không thể mặc định rằng mỗi instruction luôn tương ứng với 4 byte hay 8 byte.
+
+- **Một lưu ý về phần cứng hiện đại:** fetch không nhất thiết là một lần đọc memory đúng bằng độ dài của một instruction. CPU thường lấy dữ liệu theo các khối, tận dụng instruction cache và các cơ chế dự đoán, sau đó cung cấp instruction bytes cho bộ giải mã.
+
+**Tóm lại:** Fetch đưa instruction bytes vào luồng xử lý của CPU, decode xác định ý nghĩa của chúng, execute thực hiện thao tác tương ứng. Ba bước này là mô hình khái niệm hữu ích để hiểu quá trình thực thi, dù CPU hiện đại có thể xử lý nhiều instruction đồng thời ở các giai đoạn khác nhau.
+
+<sub>--đã hết phần giải thích--</sub>
+
+---
+
+</td>
+</tr>
+</table>
+</details>
+
+bước tiếp theo là decode, bước này là bước CPU phân tích chuỗi byte sau khi fetch từ vmem sang với chuỗi `b8 3c 00 00 00` thì CPU decode nó thành đại ý chẳng hạn như `MOV EAX, 0x3c`. Sau quá trình decode là tới quá trình execute, CPU sẽ thực hiện ngữ nghĩa (semantics) của instruction như `EAX <- 0x3c`, sau đó `RAX = 60` và CPU mới tới instruction kế tiếp là `0x401005`, vậy nên tổng quát toàn bộ quá trình là :
+
+```
+                  Virtual Memory
+                       │
+                       │
+                 RIP = 0x401000
+                       │
+                       ▼
+              ┌─────────────────┐
+FETCH         │ đọc bytes       │
+              │ b8 3c 00 00 00  │
+              └────────┬────────┘
+                       │
+                       ▼
+              ┌─────────────────┐
+DECODE        │ phân tích       │
+              │ b8 → MOV        │
+              │ 3c → immediate  │
+              └────────┬────────┘
+                       │
+                       ▼
+              ┌─────────────────┐
+EXECUTE       │ EAX ← 0x3c      │
+              └─────────────────┘
+```
+
+> [!IMPORTANT]
+> **Điểm quan trọng:** Về tổng quát thì ko phải là instruction kế tiếp CPU luôn là `RIP = RIP + instruction_length` mà còn có thể có các lệnh như `jmp`, `je`, `jz` v.v..
+
+### 1.3. Assembly và Machine Code
+#### 1.3.1. Assembly không phải Machine Code
+
+Nhiều người thường rất hay nhầm và thường hợp machine code và hợp ngữ lại thành một. Nhưng đó là sai lầm nhầm lẫn tai hại nhất, ta cần phân biệt hợp ngữ `mov edi, 1` là textual representation và `BF 01 00 00 00` là encode representation, ta phải hiểu hợp ngữ sinh ra là cho con người có thể lập trình, đọc hiểu dễ dàng hơn còn machine code là dành cho CPU để thực hiện các quy trình `fetch -> decode -> execute` sau khi chạy lệnh thực thi `./main`
+
+<details>
+	<summary><b>[Câu hỏi]</b> Machine code liệu có phải mã nhị phân 0,1 cho máy tính có thể hiểu được?</summary>
+<table>
+<tr>
+<td>
+
+---
+
+Machine code là tập hợp các byte biểu diễn các instruction dưới dạng encoding mà CPU của một kiến trúc/ISA cụ thể có thể fetch, decode và thực thi. Ở mức thấp nhất, các byte này được cấu thành từ các bit 0 và 1. Vậy nên việc gọi machine code là mã nhị phân là có thể, vì machine code được biểu diễn dưới dạng bit `0/1`.
+
+
+Tuy nhiên CPU không hiểu một chuỗi 0 và 1 theo nghĩa trừu tượng. Vì CPU có một ISA và các quy tắc instruction encoding. **Ví dụ** với x86-64:
+
+```
+10111000 00111100 00000000 00000000 00000000
+    │             │
+    │             └── immediate = 0x3c
+    │
+    └── encoding của MOV EAX, imm32
+```
+
+CPU dựa vào quy tắc encoding của x86-64 để phân tích chuỗi bit đó thành:
+
+```
+b8 3c 00 00 00
+       ↓
+   MOV EAX, 0x3c
+       ↓
+   EAX ← 60
+```
+
+suy ra cùng là các byte `0/1`, nhưng cách phân chia và diễn giải chúng theo ISA mới quyết định chúng biểu diễn instruction nào.
+
+<sub>--đã hết phần giải thích--</sub>
+
+---
+
+</td>
+</tr>
+</table>
+</details>
+
+#### 1.3.2. Assembly là dạng biểu diễn gần với Machine Code
+
+Hợp ngữ ko phải là ngôn ngữ hoàn toàn độc lập với CPU, với chip `core i3` này hay chip `core i5` khác chẳng hạn, nếu như cùng một loại mã hợp ngữ may mắn chạy được và ổn định trên hai con chip `i3` và `i5` thì ko có nghĩa nó sẽ chạy được trên các con chip điện thoại thường có ngành kiến trúc như `arm` thay vì `amd` , vì thế hợp ngữ nó phụ thuộc rất mạnh vào instruction set architecture (ISA). **Ví dụ**, instruction `mov edi, 1` là instruction của x86-64. Một kiến trúc khác như ARM64 có instruction set và encoding hoàn toàn khác. Điều này có nghĩa:
+
+```text
+C
+│
+├──→ x86-64 Assembly
+│        ↓
+│    x86-64 Machine Code
+│
+└──→ ARM64 Assembly
+         ↓
+     ARM64 Machine Code
+```
+
+Cùng một chương trình C có thể được compiler dịch thành các instruction khác nhau tùy thuộc vào kiến trúc CPU mục tiêu. Điều này giúp ta cũng mang máng rằng `gcc` code dài ko chỉ riêng là xử lý các `optimiziter, compiler, assembler v.v..` mà còn phải làm thế nào để hỗ trợ đa nền tảng sao cho chương trình có thể thực hiện hành vi như ý đồ của C chỉ định
+
+#### 1.3.3. Một Assembly instruction có thể có độ dài khác nhau
+
+Điều rất quan trọng ở phần này rằng, ta ko nên nghĩ `"à, cứ một lệnh thế này sẽ là một length giống nhau"`, sai. Một lệnh instruction ko có nghĩa là một độ dài cùng giống nhau, chúng khác nhau vì nhiều thứ **ví dụ** các instruction khác nhau có thể chiếm số byte khác nhau:
+
+<div align="center">
+
+|Instruction | Machine Code |
+|:-|:-:|
+| ret                     | C3 |
+| nop                     | 90 |
+| mov edi, 1               | BF 01 00 00 00 |
+| mov eax, 0x12345678     | B8 78 56 34 12 |
+
+</div>
+
+Vì thế CPU nó ko đơn giản là giả định số byte cố định vào một instruction, thay vào đó nó phải xác định ranh giới của từng instruction dựa trên encoding của nó. Đây cũng là một trong những lý do việc phân tích machine code x86-64 có thể phức tạp. Tuy nhiên, Machine Code không chỉ là một chuỗi số nhị phân ngẫu nhiên. **Ví dụ** `BF 01 00 00 00` ko phải là 5 byte độc lập, chúng cùng nhau mã hóa thành một instruction `mov edi, 1`
+
+#### 1.3.4. Disassembler: đi từ Machine Code về Assembly
+
+Disassembler là công cụ chuyển đổi từ mã máy sang hợp ngữ, công cụ nổi tiếng trong giới reverse engineering, cái này đơn giản là nó phân tích các opcode, mã máy có trong file ELF hay các file nhị phân được compiled ra từ trước đó, dựa vào ISA, instrution encoding để cho đầu ra là assembly representation :
+
+```
+Machine-code bytes
+        │
+        ▼
+   Disassembler
+        │
+        │ dựa vào ISA + instruction encoding
+        ▼
+Assembly representation
+```
+
+Cái này chỉ giới thiệu sơ qua vì nó chỉ giới thiệu công cụ disassembler. Các disassembler nổi tiếng như (objdump, gdb, ghidra v.v.) nói chung nó thường tích hợp chung với các IDE reverse để phục vụ soi các hợp ngữ của mã máy trong file
+
+#### 1.3.5. Phân biệt giữa byte opcode và các data/padding
+
+Cái này cực kỳ quan trọng, khi ta reverse hay debug một binary gì đó, ta phải phân biệt được cái byte `0b 00 10 00 00` này và `01 2c 9c 10` kia, nó là data/padding, hay opcode, nếu ko chúng ta rất dễ tốn time và đưa ra kết luận sai hoàn toàn chỉ vì lỗi nghiêm trọng tai hại này. Cách phân biệt buộc ta phải biết các bảng quy định opcode nó luôn có điểm khởi đầu và điểm kết thúc, nếu các byte có giá trị vượt quá điểm kết thúc của ISA quy định thì byte đó chắc chắn ko phải là opcode, mà là có thể là byte khác, có thể là operand, trường khác hoặc byte thuộc vùng miền khác
+
+Tuy nhiên các byte ko nằm trong vùng opcode ko có nghĩa là nó ko thành một instruction mà bỏ đi, nó có thể là thanh ghi, hay là một byte có thể góp phần liên kết vào các opcode để tạo nên một instruction. **Ví dụ** `48 89 e5` ko phải:
+
+```
+48 = opcode
+89 = rác
+e5 = rác
+```
+
+mà nó là một instruction hoàn chỉnh `mov rbp, rsp`. Trong đó `48` là REX prefix, `89` là opcode, `e5` là ModR/M. Ngược lại, một byte thực sự nằm trong vùng padding hoặc data thì có thể không phải instruction. Vấn đề của reverse engineering là xác định ranh giới code/data và cách giải mã bytes, chứ không chỉ nhìn một byte rồi phán nó là opcode hay rác.
+
+#### 1.3.6. Vì sao Reverse Engineering cần hiểu cả hai?
+
+Hiểu cả hai hợp ngữ và opcode, giúp reverse egineer có cái nhìn chính xác về rev vì chỉ hiểu hợp ngữ hoàn toàn ko đủ khi rev. Các lý do quan trọng: 
+
+- 1. **Thứ nhất:** hiểu machine code cho ta biết những byte thực sự tồn tại trong binary, còn hiểu hợp ngữ assembly cho ta một cách biểu diễn dễ đọc hơn về ý nghĩa của những byte đó. 
+
+- 2. **Thứ hai:** hiểu machine code giúp ta biết và bypass kỹ thuật làm rối mã thay đổi byte code fake, ko nghe nhầm, ko viễn vông và nó có thật khá lâu ở các mã độc chuyên sâu. Một khi mã độc fake hay can thiệp vào các byte code trong binary chính nó chính các công cụ như `GDB, ghidra, objdump, v.v.` đều phán đoán hợp ngữ sai hoàn toàn, hơn nữa ghidra có decompiler C, một khi hợp ngữ sai thì mã C decompiled ra cũng sai theo dây chuyền
+
+- 3. **Thứ ba:** hiểu machine code giúp phán đoán kiểu dữ liệu khi đọc hợp ngữ, tuy có decompiler nhưng vấn đề nó khá sai xót, đôi khi nó chỉ là `undenifined8` còn lại ta tự đoán, việc hiểu các byte machine code, đếm nó và thêm các kỹ thuật khác như nhìn thanh ghi v.v.. đều góp phần phán đoán chính xác hơn kiểu dữ liệu trong mã. Nếu đoán sai kiểu dữ liệu, hậu quả có thể gây sai sót dây chuyền khi phân tích bit bù hai hay là các hành vi của mã
+
+#### 1.3.7. Phân biệt giữa instruction, vaddr instruction, offset và assembly representation của instruction trong gdb
+
+Rất nhiều người nhầm giữ instrution, offset và assembly representation của một instrution ở gdb khi disas nó ra ví dụ một đoạn như sau :
+
+```asm
+0x0000555555555151 <+8>:  64 48 8b 04 25 28 00 00 00    mov rax,QWORD PTR fs:0x28
+```
+
+Họ khá dễ nhầm `0x0000555555555151` là instrution, thực chất nó là vaddr của instrution đó. Ta có thể biểu diễn nó như sau:
+
+```
+0x0000555555555151
+        │
+        └── địa chỉ ảo (virtual address) của instruction
+
+<+8>
+ │
+ └── offset của instruction so với đầu hàm main
+
+64 48 8b 04 25 28 00 00 00
+│
+└── machine-code bytes của instruction
+
+mov rax,QWORD PTR fs:0x28
+│
+└── assembly representation của instruction đó
+```
+
+Trong đó `0x0000555555555151` nó ko phải instrution, mà nó là địa chỉ ảo (vaddr) trỏ tới instruction. `<+8>` nó ko phải con số vô nghĩa, nó là khoảng cách offset từ mốc có thể là (main, _start) đến địa chỉ trỏ tới instruction. Còn dãy `64 48 8b 04 25 28 00 00 00` là là instruction encoding / instruction bytes, còn `mov rax,QWORD PTR fs:0x28` chính là assembly representation của instruction đây là sản phẩm sau khi qua biên dịch lại thành hợp ngữ mà con người có thể đọc được
+
+Nói chung, instruction thực sự nó có hai cách biểu diễn, một là byte tổng quát của instrution như `64 48 8b 04 25 28 00 00 00`, theo structure, hai là assembly representation như `mov rax,QWORD PTR fs:0x28` còn `0x0000555555555151` là địa chỉ ảo (vaddr) trỏ tới instruction
+
+---
+
+## 2.Cấu trúc tổng quát của một Instruction
+
+Một instruction ở cấp machine code không nhất thiết chỉ gồm một byte opcode. Đặc biệt với x86-64, một instruction có thể được tạo thành từ nhiều thành phần khác nhau, trong đó mỗi thành phần đảm nhiệm một vai trò nhất định trong việc mô tả instruction.
+
+Một mô hình tổng quát thường được biểu diễn như sau:
+
+```
+┌──────────┬────────┬────────┬──────┬──────────────┬──────────────┐
+│ Prefixes │ Opcode │ ModR/M │ SIB  │ Displacement │ Immediate    │
+└──────────┴────────┴────────┴──────┴──────────────┴──────────────┘
+```
+Tuy nhiên, không phải instruction nào cũng có đầy đủ tất cả các thành phần trên. Tùy instruction, một hoặc nhiều trường có thể không xuất hiện. **Ví dụ**, `b8 3c 00 00 00`, có thể được disassemble thành `mov eax, 0x3c` Trong trường hợp này, encoding có thể được nhìn đơn giản như:
+
+```
+┌────────┬──────────────────────────┐
+│ Opcode │ Immediate                │
+├────────┼──────────────────────────┤
+│   b8   │ 3c 00 00 00              │
+└────────┴──────────────────────────┘
+```
+
+Trong đó:
+
+```
+b8
+│
+└── Opcode / opcode form
+
+3c 00 00 00
+│
+└── imm32 = 0x0000003c
+
+```
+
+CPU không nhìn chuỗi này dưới dạng chữ `mov eax, 0x3c`, mà nhận được các instruction bytes `b8 3c 00 00 00`. Sau đó decoder sử dụng quy tắc instruction encoding của ISA để xác định instruction tương ứng.
+
+<details>
+	<summary><b>[Câu hỏi]</b> Làm thế nào để nhận biết các byte đó thuộc cấu trúc trường nào của instruction?</summary>
+<table>
+<tr>
+<td>
+
+---
+
+Thoáng qua ta thấy ví dụ bên trên, ta thấy trước ví dụ là một bảng cấu trúc, nhưng ta cũng thấy dòng chữ ko phải cứ instruction nào cũng tuân theo hết các cấu trúc trên. Vậy bây giờ vì sao và làm thế nào để ta biết `b8` là thuộc trường opcode và `3c 00 00 00` là thuộc trường immediate (`imm32`), ta cần hiểu CPU không tự đoán dựa trên hình dạng của byte. Nó dựa vào quy tắc encoding được ISA định nghĩa cho từng instruction form.
+
+Có thể hình dung Instruction Encoding giống như một grammar (ngữ pháp). **Ví dụ**, một encoding form có thể quy định `B8+rd id`. Trong đó:
+
+```
+B8+rd → opcode + mã register, là một opcode encoding form
+		trong đó rd được mã hóa trong 3 bit thấp của opcode.
+id    → immediate 32-bit
+```
+
+Khi decoder gặp `b8`, nó tra cứu quy tắc tương ứng và nhận ra rằng byte này thuộc form `B8+rd`, `imm32`, `b8` tương ứng với `B8 + 0`, nên register được chọn là `EAX`. Sau đó quy tắc của encoding cho biết instruction này còn cần một `imm32`. Do đó 4 byte tiếp theo được diễn giải là immediate:
+
+```
+b8 | 3c 00 00 00
+│       │
+│       └── imm32
+│
+└── opcode/form
+```
+
+Vì x86 sử dụng little-endian cho immediate nhiều byte:
+
+```
+3c 00 00 00
+        ↓
+0x0000003c
+```
+
+Kết quả là `mov eax, 0x3c`. Điểm quan trọng nằm ở đây:
+
+```
+b8
+│
+│ decode
+▼
+B8+rd, imm32
+│
+├── rd   → xác định register
+│
+└── imm32 → yêu cầu 4 byte tiếp theo
+                    │
+                    ▼
+             3c 00 00 00
+```
+
+Tức là byte `3c` không tự nói rằng nó là immediate. Chính instruction form được xác định từ các byte phía trước quy định rằng những byte tiếp theo phải được diễn giải như `imm32`.
+
+<sub>--đã hết phần giải thích--</sub>
+
+---
+
+</td>
+</tr>
+</table>
+</details>
+
+### 2.1. Opcode
+
+Opcode là trường encoding xác định operation/instruction form. Trong x86-64, opcode thường xuất hiện sau các prefix nếu instruction có prefix. Nghĩa là mã nhị phân (hoặc mã hex) dùng để xác định phép toán mà CPU sẽ thực hiện. Bây giờ đơn giản, ta lấy lệnh hợp ngữ làm minh họa, bây giờ ta muốn thực hiện phép cộng với `32bit/6bit`, ta dùng lệnh `add` với hợp ngữ nhưng với opcode nó là `05`. Ta dựa vào đó so sánh như sau :
+
+<div align="center">
+
+| nhu cầu | hợp ngữ | opcode | giải thích lệnh opcode |
+|:-|:-:|:-:|:-|
+| cộng | `add` | `05` (32/16bits) | `05` là việc cộng accumulator, imm32 |
+| trừ | `sub` | `2D id` hoặc `2B /r` | `2D id` là việc trừ giá trị tức thời, còn `2B /r` là trừ nội dung thanh ghi/bộ nhớ vào thanh ghi |
+| ... | ... | ... | ... |
+
+</div>
+
+ta thấy, lệnh hợp ngữ khi thao tác các nhu cầu hay hành vi, phép toán của CPU thì điển hành sẽ là lệnh riêng của nó như `add,sub,imul,div,v.v..` còn opcode thì cũng y chang, nhưng cái lệnh của nó sâu hơn và chi tiết hơn hợp ngữ, ví dụ muốn cộng nhưng cộng bao nhiêu bit, muốn cộng `32/16bits` thì dùng `05`, còn muốn trừ thì trừ ở đâu, trừ gía trị gì, trừ nội dung hay trừ gía trị tức thời. Nói chung nếu hợp ngữ sâu hơn C, thì opcode sâu hơn hợp ngữ, thế thì hợp ngữ cũng đâu phải là ác mộng lắm đâu
+
+### 2.2. Operand
+
+Operand là các đối tượng mà instruction thao tác lên, chẳng hạn register, memory operand hoặc immediate. Trong machine-code encoding, thông tin mô tả operand có thể được mã hóa thông qua `ModR/M`, `SIB`, `immediate`, `displacement` và các trường khác, vì vậy operand không nhất thiết tương ứng với một vùng byte riêng nằm ngay sau opcode. Dựa vào đó, ta thấy một lệnh máy thường có cấu trúc :
+
+```
+[ Opcode ] + [ Operand 1 ] + [ Operand 2 ] + … (có thể có thêm)
+```
+
+và lấy minh họa hợp ngữ, nếu `add` là cộng, CPU hiểu à nó là cộng nhưng nó cần biết thực hiện phép cộng ở phần nào với phần nào, bây giờ ta cập nhật lệnh hợp ngữ thành `add eax, 1` lúc này CPU hiểu `à cộng 1 vào thanh ghi eax`. Thì operand cũng y thế, ví dụ `05` là opcode cộng `32/16bits` thì cần phải cung cấp cộng vào ở các mục tiêu gì, lúc này cập nhật thêm operand để cộng 1 vào thanh ghi `05 01 00 00 00`
+
+Ta lưu ý số bit, thanh ghi rax là 64bits hoàn toàn cao so với `32bits`, ở byte `05 01 00 00 00` chỉ thực hiện tương đương lệnh `add eax, 1` thôi, thực tế ở đây khi dùng opcode `05` là nó đã thêm cái thanh ghi eax rồi, nên `01 00 00 00` là gía trị 1, theo little endian.
+
+<details>
+	<summary><b>[Câu hỏi]</b> Vì sao thay vì để riêng 01, thì lại thêm các byte 00 00 00 phía sau?</summary>
+<table>
+<tr>
+<td>
+
+---
+
+Đây đơn giản là lắp đầy cái phần trống của một lệnh với những byte có ý nghĩa, nếu như một `short -> int` qua compiler nó cũng sẽ dùng zero extension hoặc sign extension để lắp đầy phần dư từ `2byte -> 4byte`, thì cái này cũng vậy. Nói cho rõ thì byte `05` là opcode/encoding form của `ADD EAX, imm32`, nó bắt buộc có một trường immediate 32-bit, tức là sau `05` phải có đúng 4 byte immediate. Ta thấy `01` là 1 byte, nếu chỉ y nguyên thế này thì `3 byte còn lại tính sao?`, nên hệ thống sẽ thực hiện thêm các byte điển hình 3 null byte như trên `00 00 00` để lắp đầy 32bits.
+
+- **Vì sao lại là null byte?:** Đây ko phải là quy tắc cứng nhắc gì, nó chỉ đơn giản đảm bảo giá trị ban đầu ko bị thay đổi sau khi lắp đầy, ở đây `01 00 00 00` là 32bit/4byte đủ, nhưng hệ thống sẽ đọc theo little endianess (byte có trọng số thấp nhất sẽ đứng trước) như sau `01 00 00 00 -> 00 00 00 01`, giá trị sẽ là `1` nhưng vẫn giữ nguyên đủ 32bits/4byte
+
+  **Lưu ý:** Chúng ta ko nên gọi việc thêm các byte vào như thế là padding, việc gọi như thế là sai. Nó là thêm byte có ý nghĩa mặc dù thêm các null byte (`00`) như đợt vừa rồi thì chả có ý nghĩa gì, nhưng nếu nói `ý nghĩa của nó là lắp đầy độ rộng thì chả phải padding?` thì ta cho **ví dụ** nếu thử đổi `01 00 00 00 -> 01 76 54 32` thì little endianess `01 76 54 32 -> 32 54 76 01` thì nó là các byte có ý nghĩa
+
+  nếu việc nói này là padding thì sai hoàn toàn bản chất padding, vì nó chỉ giữ nguyên một giá trị, còn nhìn ở đây mà xem nó lộn xộn nếu mà nói padding theo bản chất của nó thì sẽ thành ra sai kết quả mất. Đó là lý do vì sao ko nên nói padding trong trường hợp này, dù là các null byte thì phải diễn đạt nó là các byte có ý nghĩa trong việc lắp đầy độ rộng toán hạng
+
+<sub>--đã hết phần giải thích--</sub>
+
+---
+
+</td>
+</tr>
+</table>
+</details>
+
+### 2.3. Register Encoding
+
+Register Encoding là cách mà x86 biến tên thanh ghi như `EAX, ECX, R8, RDI, v..v..` thành các bit/field nằm trong instruction encoding. Điểm quan trọng là CPU không lưu chữ EAX trong instruction. **Ví dụ** cho `mov eax, 1` CPU ko lưu nó như `MOV EAX, 1` mà nó lưu `B8 + register_code | imm32`, trong đó `eax` có register code là `000` và `B8 + 000 = B8` nên `B8 01 00 00 00`. Dựa vào đó ta có bảng `REG values` như sau :
+
+<div align="center">
+
+| REG values | 8bits | 16bits | 32bits |
+|-|-|-|-|
+| 000 | al | ax | eax |
+| 001 | cl | cx | ecx |
+| 010 | dl | dx | edx |
+| 011 | bl | bx | ebx |
+| 100 | ah | sp | esp |
+| 101 | ch | bp | ebp |
+| 110 | dh | si | esi |
+| 111 | bh | di | edi |
+
+</div>
+
+> [!IMPORTANT]
+> Register code không phải địa chỉ của register. mã định danh thanh ghi trong encoding, không phải `edi = địa chỉ a`, `eax = địa chỉ b`, mà nó kiểu `edi = mã số` và opcode cộng mã số đó để thực hiện lệnh với thanh ghi có mã số đó
+>
+> Với các thanh ghi 8-bit mã `100–111`, ý nghĩa phụ thuộc vào việc instruction có REX prefix hay không, không có REX thì tương ứng `AH/CH/DH/BH` có REX thì tương ứng `SPL/BPL/SIL/DIL`.
+
+Ngoài các encode cộng các mã thanh ghi vào opcode, còn có các chế độ mà Intel định nghĩa một encoding form kiểu `B8+rd ib/iw/id/iq`, trong đó `rd` đại diện cho mã thanh ghi đích. Bây giờ cho các ví dụ :
+
+```
+mov ecx, 1 -> B8 + 001 = B9 => B9 01 00 00 00
+mov edx, 1 -> B8 + 010 = BA => BA 01 00 00 00
+mov ebx, 1 -> B8 + 011 = BB => BB 01 00 00 00
+mov esp, 1 -> B8 + 100 = BC => BC 01 00 00 00
+mov ebp, 1 -> B8 + 101 = BD => BD 01 00 00 00
+mov esi, 1 -> B8 + 110 = BE => BE 01 00 00 00
+mov edi, 1 -> B8 + 111 = BF => BF 01 00 00 00
+```
+
+Nhưng x86 không phải lúc nào cũng encode register trong opcode lý giải chi tiết tại chương [4. ModR/M Byte](#4-modrm-byte). Cho **Ví dụ**, `mov eax, ebx` lệnh này không dùng kiểu `B8+rd` như `mov eax, imm32`. Nó có dạng `opcode | ModR/M` và encoding là `89 D8` và ta chuyển `D8` thành binary là `11011000`. ModR/M có cấu trúc như sau:
+
+```
+┌──────┬───────┬───────┐
+│ mod  │ reg   │ r/m   │
+│  2b  │  3b   │  3b   │
+└──────┴───────┴───────┘
+```
+
+với `11011000` ta có :
+
+```
+11 | 011 | 000
+│     │     │
+│     │     └── r/m = 000 → EAX
+│     └──────── reg = 011 → EBX
+└────────────── mod = 11 → register
+```
+
+vì thế `89 D8` được encode thành `mov eax, ebx`. Ở đây register encoding nằm trong `ModR/M`, chứ không nằm trực tiếp trong opcode. `ModR/M` sẽ đươc nói rõ ở chương dưới
+
+- **Vậy khi nào register code được mã hóa trong opcode, và khi nào được mã hóa trong ModR/M?:** Vị trí mã hóa thanh ghi phụ thuộc vào encoding form mà ISA x86 định nghĩa cho instruction, không chỉ phụ thuộc vào hành vi của lệnh. **Ví dụ**, với `mov eax, 1`, instruction sử dụng encoding form `B8+rd id`. Trong dạng này, mã thanh ghi đích được gắn vào opcode, với `EAX`, register code là `000`, vì vậy opcode là `B8`. Immediate 32-bit có giá trị `1` được mã hóa thành `01 00 00 00`, tạo thành instruction `B8 01 00 00 00`.
+
+  Ngược lại, với `mov eax, ebx`, instruction sử dụng opcode `89` cùng một byte ModR/M. Trường `reg` biểu diễn thanh ghi nguồn `EBX`, còn trường `r/m` biểu diễn thanh ghi đích `EAX`. Vì vậy, encoding là `89 D8`. Không phải mọi instruction có immediate đều mã hóa register code trong opcode, cũng không phải mọi instruction thao tác giữa hai thanh ghi đều bắt buộc dùng ModR/M theo cùng một cách. Chẳng hạn, `add eax, 1` có thể dùng opcode `05` với thanh ghi tích lũy `EAX` được ngầm định, trong khi `add ecx, 1` có thể dùng opcode `83` và ModR/M để biểu diễn toán hạng đích `ECX`.
+
+  Do đó, khi reverse engineering, cần xác định encoding form của instruction trước, sau đó mới phân tích cách các trường opcode, ModR/M, SIB, displacement và immediate biểu diễn toán hạng cụ thể.
+
+
+### 2.4. Immediate Value
+
+Immediate value (giá trị tức thời) là một giá trị hằng được mã hóa trực tiếp trong instruction, thay vì được lấy từ một thanh ghi hoặc đọc từ một địa chỉ bộ nhớ do toán hạng chỉ định. **Ví dụ** xét instruction sau `mov eax,1`, ý nghĩa này là gắn giá trị `1` vào thanh ghi `eax`, trong đó `1` là giá trị tức thời (immediate values) và `eax` là thanh ghi đích.
+
+Đối với các instruction ecode như `b8 01 00 00 00`, ta thấy và có thể phân tích `b8` là opcode của encoding form `MOV r32, imm32` khi mã thanh ghi đích là `EAX`, dạng tổng quát được mô tả là `B8+rd id`, trong đó `rd` mã hóa thanh ghi đích và `01 00 00 00` là Immediate 32-bit có giá trị số học là 1, được mã hóa theo little-endian
+
+Điều này cho thấy CPU không lưu chuỗi văn bản `mov eax, 1` trong instruction. Thay vào đó, instruction được biểu diễn bằng các byte mã máy, trong đó immediate value được mã hóa thành một trường dữ liệu của instruction. Tuy nhiên, immediate ko phải là thanh ghi hay bộ nhớ cao siêu gì, ta cần phân biệt rõ ba loại toán hạng sau :
+
+```asm
+mov eax, 1 
+mov eax, ebx 
+mov eax, DWORD PTR [rbx]
+```
+
+Trong đó :
+
+- `mov eax, 1`: có loại toán hạng nguồn là immediate, có tác dụng là gán giá trị `1` vào thanh ghi `eax`.
+- `mov eax, ebx`: có loại toán hạng nguồn là register, có tác dụng là lấy giá trị hiện tại của thanh ghi `ebx` gán vào thanh ghi `eax`
+- `mov eax, DWORD PTR [rbx]`: có loại toán hạng nguồn là memory, có tác dụng là đọc 4 byte từ địa chỉ bộ nhớ được chứa trong `RBX` và gán vào thanh ghi `eax`
+
+Ta thấy, trong trường hợp đầu tiên, giá trị 1 được chứa trong encoding của instruction. Trong trường hợp thứ hai, giá trị nguồn được lấy từ thanh ghi. Trong trường hợp thứ ba, CPU truy cập bộ nhớ để lấy dữ liệu. Vì vậy, immediate value là một phần của encoding, chứ bản thân nó không phải tên thanh ghi hay địa chỉ bộ nhớ.
+
+Immediate value có thể được mã hóa bằng các kích thước khác nhau, tùy thuộc vào encoding form và instruction cụ thể. Các kích thước thường gặp gồm `8 bit`, `16 bit`, `32 bit` và trong một số encoding form là `64 bit`. **Ví dụ** `mov eax, 1` ta biết instruction encoding của nó là `b8 01 00 00 00` immediate `01 00 00 00` được mã hóa bằng `32bits` nghĩa giá trị số học của trường này là `0x00000001`, do x86 sử dụng little-endian cho các trường số nhiều byte, byte ít quan trọng nhất được lưu trước
+
+Một **ví dụ khác**, ta cho `add ecx, 1` có thể được mã hóa thành `83 C1 01`, trong encoding của form này `83` là opcode, `C1` là byte `ModR/M`, xác định toán hạng thanh ghi và phép toán theo encoding form, `01` là immediate `8bits`. Ta thấy cùng giá trị là `1` gán vào thanh ghi nhưng lệnh `mov eax, 1` là `32bits` nhưng với `add ecx, 1` nó lại là `8bits`, chênh lệch khá lớn, như vậy cùng một giá trị số học 1 có thể được biểu diễn bằng số lượng byte khác nhau tùy theo encoding form. Không thể xác định kích thước immediate chỉ dựa vào giá trị số học của nó.
+
+Một số instruction encoding sử dụng immediate có kích thước nhỏ hơn toán hạng đích. Khi đó, kiến trúc x86 có thể quy định sign extension mở rộng dấu để chuyển immediate sang kích thước cần thiết. **Ví dụ** trong `64bits` ta có `add rax, -1`, ta thấy một encoding có thể sử dụng dạng `REX.W + 83 /0 ib`, trong đó immediate là `8bits`. Giá trị `-1` được biểu diễn ở dạng bù hai `8bits` là `FF`, khi sign extension lên `64bits` giá trị sẽ thành `0xFFFFFFFFFFFFFFFF`. Ta cần phân biệt:
+
+- **Immediate field:** các byte thực sự có trong instruction encoding.
+- **Sign extension:** cách CPU mở rộng giá trị immediate theo quy tắc của instruction.
+- **Zero extension:** mở rộng bằng các bit 0; chỉ áp dụng khi ngữ nghĩa của instruction quy định như vậy.
+
+Tuy nhiên không phải mọi immediate đều được sign-extend. Cách diễn giải phụ thuộc vào instruction và encoding form cụ thể.
+
+### 2.5. Displacement
+
+Trong x86-64, displacement là một giá trị được mã hóa trực tiếp trong instruction, dùng làm độ lệch khi tính địa chỉ hiệu dụng của toán hạng bộ nhớ. Nó thường được cộng với địa chỉ cơ sở (base) hoặc địa chỉ chỉ số (index) đã được nhân với hệ số (scale).
+
+<details>
+	<summary><b>[Câu hỏi]</b> Địa chỉ cơ sở, địa chỉ chỉ số, hệ số là gì?</summary>
+<table>
+<tr>
+<td>
+
+---
+
+Trong x86-64, base, index và scale là ba thành phần có thể phối hợp để tính địa chỉ bộ nhớ hiệu dụng (effective address). Ta sẽ gặp chúng khi giải mã byte SIB trong các instruction như `mov eax, [rbx + rcx*4 + 8]`. Trong đó :
+- **Base:** Hay còn được gọi là thanh ghi cơ sở dùng để chứa địa chỉ nền để tính địa chỉ cần truy cập. Ví dụ, `RBX = 0x1000`.
+- **Index:** Hay còn được gọi là thanh ghi chỉ số dùng để chứa giá trị chỉ số hoặc độ lệch dùng để xác định vị trí dữ liệu. Ví dụ, `RCX = 3`.
+- **Scale:** Hay còn được gọi là hệ số nhân dùng để nhân giá trị index với `1`, `2`, `4` hoặc `8` trước khi cộng vào địa chỉ cơ sở. Các hệ số này thuận tiện khi truy cập phần tử có kích thước tương ứng.
+
+Ngoài ba thành phần đó, địa chỉ còn có thể cộng thêm displacement, là một hằng số được mã hóa trực tiếp trong instruction. Từ đó suy ra công thức tương ứng là `EA = Base + Index x Scale + Displacement` và `EA` là effective address công thức này sẽ chi tiết tại phần [5. SIB Byte](#5-sib-byte), tức địa chỉ hiệu dụng được tính ra. Không phải instruction nào cũng cần cả bốn thành phần. Ví dụ cụ thể với `mov eax, [rbx + rcx*4 + 8]`
+
+Giả sử hai thanh ghi `rbx` và `rcx` có giá trị lần lượt là `0x1000` và `3` và xét instruction `mov eax, DWORD PTR [rbx + rcx*4 + 8]`, lúc này quy tắc sẽ tính địa chỉ là như sau:
+
+<p align="center">
+	<img src="image/image7.png" alt="tính địa chỉ">
+</p>
+
+**Chú ý:** `RCX = 3` là giá trị chỉ số, không phải địa chỉ `0x3`. Sau khi nhân với scale `4`, nó tạo độ lệch `12` byte. Đó là lý do scale hữu ích khi truy cập mảng.
+
+- **Vì sao cần scale?:** Giả sử một mảng gồm các phần tử 32-bit, mỗi phần tử chiếm 4 byte:
+
+  <p align="center">
+    <img src="image/image8.png" alt="sơ đồ mảng 4byte">
+  </p>
+
+  Để truy cập `A[3]` chương trình sẽ thực hiện `EA = 0x1000 + 3 x 4 = 0x100C` nhưng hợp ngữ lại có cách biểu diễn bằng `mov eax, DWORD PTR [rbx + rcx*4]` với `RBX = 0x1000`, `RCX = 3`. Nếu phần tử là 64-bit, mỗi phần tử chiếm 8 byte, nên scale có thể là 8. Với phần tử 8-bit, scale thường là 1
+
+<sub>--đã hết phần giải thích--</sub>
+
+---
+
+</td>
+</tr>
+</table>
+</details>
+
+> [!IMPORTANT]
+> displacement không phải bản thân địa chỉ bộ nhớ. Nó là một thành phần có thể được CPU dùng để tính địa chỉ cần truy cập.
+
+**Ví dụ** xét instruction `mov eax, DWORD PTR [rbx + 8]` ý nghĩa của nó là đọc 4 byte từ địa chỉ `RBX + 8`, sau đó ghi dữ liệu vào `EAX`. Bây giờ giả sử ta cho địa chỉ cơ sở là `0x1000` thì `+8` là displacement, suy ra ta có `0x1000 + 8 = 0x1008` và kết quả địa chỉ `0x1008` chính là địa chỉ mà CPU truy cập để lấy 4byte trong đó
+
+- **Displacement xuất hiện như thế nào trong machine code?:** Nó sẽ thành thế này `8B 43 08` và instruction encode này là của `mov eax, DWORD PTR [rbx + 8]`. Bây giờ ta bật GDB lên thực chiến luôn, vì cái câu hỏi này sẽ dễ hiểu hơn khi ta thực chiến. Ta cho code hợp ngữ sau:
+
+  ```asm
+   section .text
+	global _start
+  _start:
+	  mov eax, dword [rbx + 8]
+	  mov eax, 60
+	  mov rdi, 1
+	  syscall
+  ```
+
+  > nasm -f elf64 asm.asm ; ld asm.o -o asm ; gdb -q ./asm
+
+  khi vào gdb ta ấn start và ta `disas /r 0x401000` là vaddr của `_start` ko chắc đó có phải là vaddr gốc ko vì địa chỉ `_start` phụ thuộc vào linker và PIE. Với binary không PIE (như ld mặc định cũ) có thể là `0x401000`, nhưng hiện nay hầu hết binary là PIE thì địa chỉ sẽ là kiểu `0x555555554000 + offset`:
+
+  <p align="center">
+  	<img src="image/image1.png"/>
+  </p>
+
+  ta thấy, với gdb instruction encode là `8B 43 08`, trong đó :
+
+  - `8B` : là opcode ý nghĩa của nó là xác định dạng lệnh `MOV r32, r/m32` nghĩa là đưa giá trị 32-bit từ thanh ghi hoặc toán hạng bộ nhớ vào thanh ghi 32-bit.
+  - `43` : đây là [modR/M byte](#4-modrm-byte), cụ thể `43 = 01000011` khi dịch ra nhị phân :
+    - `mod = 01`: toán hạng bộ nhớ sử dụng displacement 8-bit.
+    - `reg = 000`: thanh ghi đích là `eax`
+    - `r/m = 011`: thanh ghi cơ sở `RBX` trong dạng địa chỉ này
+  - `08` : đây là displacement 8bit, giá trị `08` trong hệ hex là `8` trong hệ thập phân. CPU sử dụng nó làm độ lệch cộng với địa chỉ cơ sở RBX.
+
+> [!IMPORTANT]
+> **Điểm quan trọng:** 08 không phải địa chỉ bộ nhớ hoàn chỉnh. Nó chỉ là độ lệch được mã hóa trong instruction. Với assembly representation của instruction encoding trên là `mov eax, DWORD PTR [rbx + 0x8]`, đây là cách displacement xuất hiện như thế nào trong machine code, nó chỉ là byte `8B 43 08`.
+- **Phân biệt giữa immediate byte và displacement:** Đây là phần quan trọng, vì nếu ko biết phân biệt được thì dễ chết trong biển rừng machine code vì nó ko có function, variable, bây giờ nhìn ảnh :
+
+  <p align="center">
+  	<img src="image/image2.png"/>
+  </p>
+
+  ta thấy, displacement và immediate khác nhau khá nhiều. Ở đây, ta soi byte displacement `8b 43 08` và byte immediate `b8 3c 00 00 00` và `bf 01 00 00 00`, ta thấy các byte immediate thường có `xx 3c 00 00 00` và `xx 01 00 00 00` (lấy từ ảnh) vì nó chỉ transmit gía trị tức thời như số vào trong thanh ghi ngoài ra còn có `8bit`,`16bit`,`32bit`, tùy instruction. Còn byte displacement `8b 43 08` nó dùng truy cập bộ nhớ ,nhưng `displacement = 8` và cpu sử dụng nó làm độ lệch cộng với địa chỉ cơ sở `RBX`.
+
+> [!IMPORTANT]
+> Displacement và Immediate hoàn toàn khác nhau, displacement là giá trị để làm độ lệch khi truy cập bộ nhớ còn immediate là giá trị gán trực tiếp vào một thanh ghi, hay cái gì đó
+
+### 2.6. Instruction Length
+
+Instruction length là độ dài của một instruction sau khi được mã hóa thành machine code, được tính bằng byte. Trong kiến trúc x86-64, các instruction có độ dài thay đổi (variable-length instruction encoding). Một instruction có thể chỉ dài 1 byte, nhưng cũng có thể dài nhiều byte tùy vào opcode, prefix, ModR/M, SIB, displacement và immediate mà instruction đó sử dụng.
+
+Đối với x86-64, độ dài tối đa của một instruction là 15 byte. Nếu quá trình giải mã gặp một instruction cần nhiều hơn 15 byte, nó không được xem là một instruction hợp lệ theo quy tắc mã hóa x86-64. Ví dụ các độ dài của instruction :
+
+<div align="center">
+
+| Instruction | machine code | instruction length |
+|-|-|-|
+| `mov eax, 1` | `B8 01 00 00 00` | 5byte |
+| `nop` | `90` | 1byte |
+| `mov eax, [rbx + 8]` | `8B 43 08` | 3byte |
+
+</div>
+
+Lý do độ dài khác nhau là mỗi instruction sử dụng dạng mã hóa khác nhau. `nop` chỉ cần một byte. `mov eax, 1` cần opcode và `immediate 32-bit`. Trong khi đó, `mov eax, [rbx + 8]` cần opcode, `ModR/M` và `displacement 8-bit`. Vì vậy, không thể xác định độ dài instruction chỉ bằng cách nhìn vào tên lệnh assembly hoặc giá trị toán hạng. Ta phải dựa vào encoding cụ thể của instruction.
+
+<details>
+	<summary><b>[Câu hỏi]</b> vì sao reverse engineering cần phải hiểu instruction length?</summary>
+<table>
+<tr>
+<td>
+
+---
+
+Khi phân tích một binary, ta thường nhìn thấy một dãy byte liên tục trong vùng mã thực thi. Những byte này không tự mang theo ranh giới instruction theo cách mà con người có thể nhìn thấy trực tiếp. Disassembler phải giải mã dãy byte theo kiến trúc instruction set để xác định instruction bắt đầu ở đâu, kết thúc ở đâu và instruction tiếp theo nằm tại địa chỉ nào.
+
+**Ví dụ**, nếu một instruction dài 5 byte nhưng bị diễn giải nhầm thành instruction dài 3 byte, các byte còn lại có thể bị giải mã thành những instruction khác. Điều này có thể dẫn đến một luồng disassembly khác với luồng mà ta dự định phân tích. Vì vậy, hiểu Instruction Length giúp ta đọc kết quả từ GDB, objdump hoặc Ghidra chính xác hơn, đồng thời hiểu được một phần cơ sở của các kỹ thuật như linear disassembly, recursive traversal và anti-disassembly.
+
+<sub>--đã hết phần giải thích--</sub>
+
+---
+
+</td>
+</tr>
+</table>
+</details>
+
+---
+
+## 3. REX Prefix
+### 3.1. REX Prefix là gì?
+
+Trong x86-64, REX Prefix là một byte prefix đứng trước opcode, được dùng để mở rộng khả năng mã hóa instruction, đặc biệt là hỗ trợ thanh ghi `64-bit`, thanh ghi tổng quát `R8–R15` và các toán hạng `8-bit` bổ sung như `SPL`, `BPL`, `SIL`, `DIL`. Để biết Rex prefix xuất hiện thế nào, ta xét hai instruction :
+
+```asm
+mov eax, 1 ; B8 01 00 00 00
+mov rax, 1 ; 48 C7 C0 01 00 00 00
+```
+
+Ở ví dụ thứ hai, `48` là REX prefix (`REX.W = 1`), báo rằng instruction sử dụng kích thước toán hạng `64-bit` trong encoding này. Immediate vẫn là `32-bit` và được sign-extend thành `64-bit` khi thực thi.
+
+- **Lưu ý:** `mov rax, 1` có nhiều encoding hợp lệ. **Ví dụ** trên dùng dạng `48 C7 C0 01 00 00 00`, một dạng khác dùng `48 B8 01 00 00 00 00 00 00 00`, với immediate `64-bit`. Vì vậy, không nên kết luận rằng mọi instruction `mov rax, 1` đều có cùng machine code.
+
+### 3.2. Cấu trúc byte REX
+
+Rex prefix có cấu trúc như sau
+
+<p align="center">
+	<img src="image/image3.png" alt="ảnh cấu trúc rex prefix">
+</p>
+
+**Trong đó:**
+- `W`: Thường chọn kích thước toán hạng `64-bit` khi bằng `1`, tùy instruction.
+- `R`: Mở rộng trường `reg` của `ModR/M`, cho phép mã hóa thêm thanh ghi.
+- `X`: Mở rộng trường `index` của `SIB`.
+- `B`: Mở rộng trường `base` của `SIB` hoặc trường `r/m` của `ModR/M`, cũng có thể mở rộng thanh ghi được mã hóa trong opcode.
+
+ví dụ với `48`:
+
+```
+48 = 0100 1 0 0 0
+       |  | | | |
+     0100 W R X B
+          | | | |
+          1 0 0 0
+```
+
+Ta thấy, lấy 4bit cho trường `fixed bit` và 4bit còn lại cho các trường `WRXB`, ở đây byte `48` tương ứng với `REX.W = 1`, còn `R`, `X`, `B` đều bằng `0`. Lưu ý, `48` là byte lầ machine code, chứ ko phải là số nguyên hệ cơ số 2
+
+- **REX Prefix giúp mở rộng thanh ghi như thế nào?:**
+  - **Trường hợp A. Chọn toán hạng 64-bit:** Xét các đoạn code assembly như sau:
+
+    ```asm
+	    mov eax, ebx
+	    mov rax, rbx
+    ```
+
+    một instruction điển hình cho từng lệnh ta có :
+
+    ```asm
+	    mov eax, ebx ; 89 D8
+	    mov rax, rbx ; 48 89 D8
+    ```
+
+    ta thấy, với lệnh đầu tiên là `mov eax, ebx` có instruction byte `89 D8` và lệnh này 32bit, nhưng với lệnh `mov rax, rbx` ta lại thấy nó có `48 89 D8` và byte `48` là byte `REX.W = 1` mà chúng ta vừa phân tích ở trên, nó chọn toán hạng 64bit cho dạng `MOV` này
+
+  - **Trường hợp B. Sử dụng thanh ghi R8–R15:** Xét các đoạn code assembly như sau:
+
+    ```asm
+	    mov r8d, eax ; 41 89 C0
+    ```
+
+    Ở đây, `41 = 01000001`, tức `REX.B = 1`. Bit mở rộng cho phép mã hóa `R8D` thay vì chỉ các thanh ghi thuộc nhóm `EAX–EDI`
+
+    - **Vậy nếu là REX.W = 1, thì với hệ thống hay cận cảnh Debugger nó thực sự được kéo rộng ra 64bit cao hơn như thế nào?:** nó không tự kéo giãn dữ liệu bên trong file hay CPU. Nó làm thay đổi cách chương trình/CPU thực thi instruction, từ đó chọn phép toán có độ rộng toán hạng 64 bit thay vì 32 bit. Ta cho instruction encode byte `89 D8` và `48 89 D8` :
+
+      <p align="center">
+	    <img src="image/image4.png" alt="ảnh cấu trúc rex prefix">
+	  </p>
+
+      Hai instruction có cùng opcode `89` và cùng byte `ModR/M D8`. Khác biệt là instruction thứ hai có thêm byte `48`, tức `REX.W = 1`. Debbuger không nhìn thấy chuỗi ký tự `mov rax, rbx` như con người. Nó đọc byte instruction, giải mã các trường mã hóa, rồi xác định độ rộng toán hạng mà instruction yêu cầu. Từ đây suy ra debugger nó ko đọc từng byte, mà nó đọc một cụm byte, length hay chiều dài rộng byte tùy thuộc vào instruction và cũng đồng nghĩa ta có thể suy ra là CPU đã được thay đổi cách thực thi sang 64bit
+	- **Nhưng vấn đề là sao Debugger nó có thể biết để đọc một cụm byte?:** CPU không cần biết trước toàn bộ độ dài. Nó sử dụng cơ chế nhận diện và giải mã tuần tự các trường của instruction để xác định ranh giới instruction. Trong CPU hiện đại, một số bước có thể diễn ra song song hoặc được tối ưu hóa, nhưng về mặt kiến trúc, ta có thể mô hình hóa quá trình như sau vì CPU không thể mặc định mỗi instruction có độ dài cố định, xét ba instruction :
+
+      ```asm
+	      nop                 ; 90 -> 1byte
+	      mov eax, ebx        ; 89 D8 -> 2byte
+	      mov rax, rbx        ; 48 89 D8 -> 3byte
+      ```
+
+      Nếu CPU luôn đọc đúng một byte cho mỗi instruction, nó không thể giải mã đầy đủ `89 D8`. Ngược lại, nếu luôn đọc ba byte, instruction `nop` sẽ bị đọc lẫn với byte thuộc instruction tiếp theo. Vì vậy, x86-64 sử dụng instruction encoding có độ dài biến đổi. Một instruction có thể dài từ 1 đến 15 byte trong chế độ 64 bit.
+    - **Debugger nhận diện cấu trúc instruction như thế nào?:** để hiểu thì ta mô phỏng quá trình của nó như sau, với instruction encode byte `48 89 D8`.
+
+	  <div align="center">
+
+      | Rex | Opcode | ModR/M |
+	  |-|-|-|
+	  | 48 | 89 | D8 |
+
+	  </div>
+
+       Bước đầu tiên là nhận diện prefix, CPU nhận ra byte `48` là REX prefix trong chế độ 64 bit. Trường `W=1` yêu cầu dạng toán hạng 64 bit cho instruction này. Bước 2 là giải mã opcode, Opcode `89` xác định dạng `MOV r/m, r` nghĩa là sao chép dữ liệu từ toán hạng thanh ghi nguồn sang toán hạng đích `r/m`. Bước 3 là giải mã [ModR/M](#4-modrm-byte), byte `D8` có giá trị nhị phân `11011000`:
+
+	  <div align="center">
+
+	  | mod | reg | r/m |
+	  |-|-|-|
+	  | 11 | 011 | 000 |
+
+	  </div>
+
+	    `mod=11` cho biết toán hạng `r/m` là thanh ghi, `reg=011` chỉ `RBX/EBX` tùy độ rộng, còn `r/m=000` chỉ `RAX/EAX` tùy độ rộng. Kết hợp với `REX.W=1`, instruction được giải mã thành `mov rax, rbx`. Lưu ý rằng đây là mô hình giải thích logic giải mã. Nó không khẳng định CPU phải xử lý từng trường bằng các bước tuần tự tách biệt theo đúng thứ tự trên trong phần cứng.
+
+    - **Nhưng Debbuger biết khi nào instruction kết thúc bằng cách nào?:** Instruction x86-64 không có một byte đánh dấu kết thúc chung như `END`. Thay vào đó, cấu trúc mã hóa của instruction quy định trường nào xuất hiện và trường đó dài bao nhiêu. Bộ giải mã xác định các trường bắt buộc dựa trên prefix và opcode. **Ví dụ** `90` là `NOP` và `NOP` được mã hóa bằng một byte, nên instruction kết thúc ngay sau byte đó. Tiếp tục, `89 D8` là dạng `MOV r/m32, r32` cần opcode `89` và byte ModR/M `D8`. Không có trường displacement hoặc immediate trong encoding này, nên instruction dài 2 byte.
+> [!IMPORTANT]
+> Trong mã hóa x86, việc có REX prefix còn ảnh hưởng đến cách diễn giải một số mã thanh ghi 8-bit:
+> - **Không có REX:** mã `100–111` có thể chỉ `AH`, `CH`, `DH`, `BH`.
+> - **Có REX:** các mã tương ứng chỉ `SPL`, `BPL`, `SIL`, `DIL`.
+>
+> Chúng ta gọi cách thức biên dịch sang mã hợp ngữ là do debugger/decompiler thực hiện, thực chất các công cụ như debugger/decompiler nó mới quan trọng và cực đoan hóa các cái instruction length, đọc đâu, in đâu, hay rex prefix nhiêu đó, để cho ra hợp ngữ kết quả chính xác nhất. Nhưng với CPU thực tế, nó ko biết độ dài instruction là gì, nó cũng ko biết instruction là sao luôn, nó chỉ đọc các bit `0` và `1` từ đầu đến cuối và thực thi mù quáng thôi, còn cách nó thực thi thế nào tùy vào bit `0` và `1` biễu diễn theo quy định của cấu trúc ISA. Học program encode là để ta hiểu bit `0` và `1` nó sẽ cho CPU thực thi gì, làm hành vi gì và góp phần hiểu cơ chế của debugger
+
+REX Prefix có mối liên hệ với Instruction Length, REX prefix chiếm đúng 1 byte. Nếu một instruction cần REX prefix, byte này là một phần của instruction encoding và làm tổng độ dài tăng thêm một byte so với cùng dạng encoding không có prefix, nếu các thành phần còn lại giữ nguyên. **Ví dụ :**
+
+```asm
+mov eax, ebx  ; 89 D8     -> 2 byte
+mov rax, rbx  ; 48 89 D8  -> 3 byte
+```
+
+Đây cũng là lý do khi dump machine code, ta không nên mặc định rằng byte đầu tiên luôn là opcode. Nó có thể là một prefix như REX, phải giải mã theo cấu trúc instruction của x86-64. Tóm lại là REX Prefix không phải instruction độc lập. Nó là một byte bổ sung cho phép encoding x86-64 biểu diễn thêm thông tin về kích thước toán hạng và các thanh ghi mở rộng.
+
+### 3.3. Các nhóm của Prefix ngoài Rex
+
+Vừa rồi, ta hiểu rex prefix nhưng rex chỉ là một phần của prefix, thực chất prefix là khái niệm rộng còn nhiều phần tử gộp nên nó. Các nhóm phần tử gồm `Lock`, `REP/REPNE`, `Operand-size override`, `Address-size override`, `Segment override`, `REX` từ đó ta lập thành một bảng như sau :
+
+<div align="center">
+
+| Nhóm |	Byte tiêu biểu |	Chức năng |
+|:-|:-|:-|
+| Lock |	`F0`	| Yêu cầu ngữ nghĩa khóa cho các instruction hỗ trợ |
+| REP / REPNE |	`F3`, `F2` |	Lặp hoặc thay đổi ngữ nghĩa của một số instruction |
+| Operand-size override |	`66` |	Thay đổi kích thước toán hạng trong các trường hợp được quy định |
+| Address-size override	| `67` |	Thay đổi kích thước địa chỉ |
+| Segment override |	`2E`, `36`, `3E`, `26`, `64`, `65` |	Chọn segment override trong những trường hợp áp dụng |
+| REX |	`40–4F` |	Mở rộng thanh ghi và điều khiển kích thước toán hạng 64-bit |
+
+</div>
+
+Điểm khác biệt chính là REX có cấu trúc bit riêng để mở rộng encoding, chứ không chỉ là một byte báo thay đổi chung. Bây giờ chúng ta tìm hiểu chi tiết từng nhóm một: 
+
+- **nhóm Lock prefix:** nhóm `lock` dùng để yêu cầu một thao tác đọc–sửa–ghi trên bộ nhớ được thực hiện theo cơ chế atomic, tức là các luồng CPU khác không thể chen vào giữa thao tác đó theo cách làm hỏng tính nguyên tử của phép cập nhật. Nhưng LOCK không dùng được với mọi instruction. Nó chỉ hợp lệ với những dạng instruction hỗ trợ ngữ nghĩa khóa theo kiến trúc x86.
+
+  **Ví dụ:** cho `lock add`. Giả sử một biến `counter` nằm trong bộ nhớ và hai thread cùng tăng nó. Không có atomicity, thao tác tăng có thể tương đương với ba bước:
+  - 1.Đọc giá trị `counter` từ bộ nhớ.
+  - 2.Cộng `1`.
+  - 3.Ghi kết quả về bộ nhớ.
+  
+  Nếu hai thread cùng đọc giá trị `10` trước khi bên nào ghi kết quả, cả hai có thể ghi `11`. Một lần tăng bị mất. Với `LOCK ADD`, thao tác cộng trên toán hạng bộ nhớ được thực hiện nguyên tử theo các quy tắc của kiến trúc `lock add dword [counter], 1`. Trong NASM, đây là cú pháp minh họa cho một phép cộng atomic vào biến bộ nhớ `counter`.
+
+  - **LOCK hoạt động ở mức phần cứng thế nào?:** Trên CPU hiện đại, LOCK không đơn giản có nghĩa là khóa toàn bộ bus hệ thống trong mọi trường hợp. Nếu vùng nhớ được khóa phù hợp với cơ chế coherence của cache, CPU thường có thể bảo đảm atomicity bằng cơ chế cache locking. Trong các trường hợp đặc biệt như truy cập bộ nhớ không phù hợp hoặc vượt ranh giới cache line, cơ chế mạnh hơn có thể cần thiết và chi phí có thể lớn hơn. Vì thế, cách hiểu đúng là LOCK yêu cầu ngữ nghĩa atomic theo kiến trúc, chứ không phải luôn khóa toàn bộ CPU hoặc toàn bộ bus.
+
+  Ví dụ, `F0` đứng trước `MOV` thông thường không tự động biến nó thành một phép MOV atomic hợp lệ. Nếu instruction không hỗ trợ `LOCK`, CPU có thể phát sinh lỗi `#UD` (Invalid Opcode).
+
+> [!NOTE]
+> **Ghi nhớ:** `LOCK` là prefix điều khiển ngữ nghĩa atomic của một số instruction, `REX` là prefix mang các bit mở rộng encoding. Cả hai đều là prefix, nhưng chức năng hoàn toàn khác nhau.
+
+- **nhóm REP / REPNE:** `REP` và `REPNE` là các prefix trong x86 dùng chủ yếu để lặp lại một số instruction xử lý chuỗi. Khác với `LOCK`, chúng không nhằm bảo đảm atomicity, khác với `REX`, chúng không dùng các bit W/R/X/B để mở rộng thanh ghi. Hai byte thường gặp là `F3` cho `REP`, `REPE` hoặc `REPZ`, tùy instruction và `F2` cho `REPNE` hoặc `REPNZ`, tùy instruction.
+  Trong đó `REP` là lặp lại instruction và `REPNE` là lặp cho đến khi không còn thỏa điều kiện, ví dụ `REP` cho :
+
+  ```asm
+  cld
+  mov ecx, 4
+  mov esi, source
+  mov edi, destination
+  rep movsb
+  ```
+
+  `MOVSB` sao chép một byte từ địa chỉ `DS:RSI` sang `ES:RDI` trong chế độ 64-bit, với các quy tắc segment tương ứng. `REP MOVSB` lặp thao tác sao chép theo số lần được chỉ định bởi `RCX`. Với `RCX = 4`, CPU thực hiện tối đa bốn lần sao chép byte, cập nhật `RSI`, `RDI` và giảm `RCX` sau mỗi lần lặp. `CLD` đặt Direction Flag về `0` để các con trỏ tăng lên sau mỗi lần xử lý. Và encoding của `rep movsb` là `F3 A4` trong đó `A4` là opcode của `MOVSB` còn `F3` yêu cầu lặp thao tác theo quy tắc của instruction này.
+  Ví dụ cho `REPNE` xét :
+
+  ```asm
+  cld
+  mov ecx, 100
+  mov edi, buffer
+  xor eax, eax
+  repne scasb
+  ```
+
+  `SCASB` so sánh giá trị trong `AL` với byte tại địa chỉ `ES:RDI`, đồng thời cập nhật các cờ trạng thái và con trỏ. `REPNE SCASB` lặp khi `RCX` chưa bằng 0 và `ZF = 0`, nghĩa là lần so sánh gần nhất chưa tìm thấy byte bằng `AL`. Trong ví dụ, `AL = 0`, nên đoạn mã tìm byte 0 trong vùng nhớ, tối đa 100 byte. Nó dừng khi tìm thấy byte bằng 0 hoặc khi hết số lần lặp. Encoding của `repne scasb` là `F2 AE` trong đó `F2` là `repne` và `AE` là `scasb`
+
+Phân biệt `REP`, `REPE` và `REPNE` ta có bảng so sánh như sau :
+
+<div align="center">
+
+| Prefix / tên |	Điều kiện lặp |
+|:-|:-|
+| `REP`	 | Tiếp tục khi bộ đếm khác 0 |
+| `REPE` / `REPZ` |	Tiếp tục khi bộ đếm khác 0 và `ZF = 1` |
+| `REPNE` / `REPNZ` |	Tiếp tục khi bộ đếm khác 0 và `ZF = 0` |
+
+</div>
+
+`REPE` và `REPZ` là hai tên cho cùng một dạng prefix `F3`, `REPNE` và `REPNZ` tương ứng với `F2`.
+
+> [!NOTE]
+> **Điểm cần nhớ:** ý nghĩa chính xác phụ thuộc vào instruction. Với `MOVSB`, `F3` dùng để lặp sao chép, còn với `SCASB`, prefix có thể kết hợp điều kiện dựa trên `ZF`.
+
+Tóm lại, `F0` (LOCK) liên quan đến atomicity, `F2`/`F3` (REP-family) liên quan đến việc lặp và điều kiện lặp của các instruction được hỗ trợ, còn REX (`40–4F`) liên quan đến mở rộng encoding trong x86-64.
+
+- **nhóm Operand-size override:** Operand-size override là nhóm prefix dùng để thay đổi kích thước toán hạng mặc định của một số lệnh x86. Byte mã máy của prefix này là `66`. Nó thuộc nhóm Legacy Prefixes, không phải REX prefix. Khái niệm operand size là kích thước toán hạng mà lệnh thao tác, chẳng hạn `16`, `32` hoặc `64` bit.
+  Trong x86, kích thước toán hạng mặc định phụ thuộc vào chế độ hoạt động của CPU và từng lệnh. Trong chế độ 64-bit, với nhiều lệnh số nguyên thông thường:
+  - Mặc định là 32-bit.
+  - Prefix `0x66` thường chuyển kích thước toán hạng từ 32-bit sang 16-bit.
+  - Prefix REX với bit `W = 1` thường yêu cầu kích thước toán hạng 64-bit.
+  **Ví dụ:** Xét 3 lệnh :
+
+  ```asm
+  mov eax, ebx
+  mov ax, bx
+  mov rax, rbx
+  ```
+
+  Ba lệnh trên đều thực hiện phép sao chép dữ liệu giữa các thanh ghi, nhưng kích thước toán hạng khác nhau. Cụ thể:
+
+  <div align="center">
+
+  | Lệnh | Kích thước | Mã máy |
+  |---|---:|---|
+  | `mov eax, ebx` | 32-bit | `89 D8` |
+  | `mov ax, bx` | 16-bit | `66 89 D8` |
+  | `mov rax, rbx` | 64-bit | `48 89 D8` |
+
+  </div>
+
+  Các mã trên là những encoding tương ứng trong chế độ 64-bit. Bây giờ, ta phân tích từng trường hợp:
+  - **Trường hợp 1:** Không có prefix xét `89 D8` trong đó `89` là opcode `MOV r/m, r` và `D8` là ModR/M `mod=11, reg=011, r/m=000`. `89` chọn dạng lệnh `MOV r/m, r`. Với encoding này, ModR/M `D8` chỉ ra đích là `EAX`, nguồn là `EBX` khi kích thước toán hạng mặc định là 32-bit. Kết quả thành lệnh `mov eax, ebx`
+  - **Trường hợp 2:** Có prefix `66 66 89 D8` trong đó `66` là Operand-size override, `89` là Opcode, `D8` là ModR/M. Prefix `66` yêu cầu kích thước toán hạng 16-bit đối với lệnh này. Kết quả ra lệnh hoàn chỉnh `mov ax, bx`
+
+    **Lưu ý:** `66` không thay đổi cấu trúc byte ModR/M `D8`. Nó thay đổi cách giải mã kích thước toán hạng của lệnh.
+
+  - **Trường hợp 3:** Có REX.W `48 89 D8`, trong đó `48` là REX prefix `W=1, R=0, X=0, B=0`, `89` là Opcode, `D8` là ModR/M. Bit `W=1` yêu cầu kích thước toán hạng 64-bit đối với lệnh này. Kết quả ra lệnh hoàn chỉnh `mov rax, rbx`
+
+  Vậy, tóm lại với ví dụ này ra kết quả như sau:
+
+  ```asm
+  89 D8       → mov eax, ebx
+  66 89 D8    → mov ax, bx
+  48 89 D8    → mov rax, rbx
+  ```
+
+  **Tuy nhiên:** `0x66` ko phải phải lúc nào cũng chuyển 32-bit thành 16-bit, đây là điểm rất quan trọng. Prefix `0x66` không mang một giá trị cố định kiểu chuyển 32-bit thành 16-bit cho mọi lệnh. Nó yêu cầu thay đổi kích thước toán hạng theo quy tắc của instruction và chế độ hoạt động hiện tại. **Ví dụ**, trong chế độ 64-bit:
+
+  ```asm
+  mov ax, bx
+  add ax, 1
+  sub ax, 2
+  ```
+
+  Các lệnh số nguyên này có thể sử dụng prefix `66` để chỉ định kích thước toán hạng 16-bit. Tuy nhiên, không phải lệnh nào cũng tuân theo quy tắc đơn giản này. Một số opcode có kích thước toán hạng cố định, một số có quy tắc riêng, và một số lệnh có thể sử dụng `66` cho ý nghĩa khác.
+
+  Đặc biệt, đối với các lệnh SIMD, prefix `66` có thể tham gia lựa chọn biến thể opcode thay vì chỉ đơn thuần thay đổi kích thước toán hạng số nguyên. Vì vậy, cần xem xét opcode cụ thể trước khi kết luận ý nghĩa của prefix.
+- **nhóm Address-size override:** Address-Size Override là prefix dùng để thay đổi kích thước địa chỉ mà CPU sử dụng khi giải mã một số lệnh. Mã byte của prefix này là `67`. Nó thuộc nhóm Legacy Prefixes, cùng nhóm với Operand-Size Override (`66`). Điểm quan trọng nhất:
+  - `0x66` liên quan đến kích thước toán hạng dữ liệu (operand size).
+  - `0x67` liên quan đến kích thước địa chỉ (address size).
+  Trong chế độ 64-bit, kích thước địa chỉ mặc định của phần lớn lệnh truy cập bộ nhớ là 64-bit. Prefix `0x67` có thể chuyển kích thước địa chỉ đó xuống 32-bit. Để hiểu rõ hơn, ta xét lệnh hợp ngữ sau `mov eax, DWORD PTR [rbx + rcx*4 + 8]`, lúc này CPU phải thực hiện hai việc khác nhau đó là tính địa chỉ bộ nhớ và truy cập dữ liệu
+
+  Đầu tiên ta nói tới việc tính toán địa chỉ bộ nhớ, ta đã biêt công thức tính địa chỉ bộ nhớ là `EA = RBX + RCX x 4 + 8` dựa vào đoạn lệnh hợp ngữ đã được xét trên, trong đó EA (Effective Address) là địa chỉ hiệu dụng được tính từ các thanh ghi và displacement. Kế tiếp, ta nói tới việc truy cập dữ liệu ở đây CPU đọc 4 byte tại địa chỉ `EA`, sau đó ghi giá trị vào `EAX` (vì `4byte = 32bits`, mà `eax` là thanh ghi 32bits). Ta có:
+
+  <div align="center">
+
+  | Thuộc tính | Giá trị |
+  |---|---|
+  | Operand size | 32-bit |
+  | Address size | 64-bit |
+  | Thanh ghi dữ liệu | `EAX` |
+  | Thanh ghi địa chỉ | `RBX`, `RCX` |
+  | Kích thước dữ liệu đọc | 4 byte |
+
+  </div>
+
+  Như vậy, kích thước dữ liệu được đọc không quyết định kích thước địa chỉ được sử dụng. Trong chế độ 64-bit, đối với những lệnh áp dụng quy tắc address-size override:
+
+  <div align="center">
+
+  | Trường hợp | Address size | Cách tính địa chỉ |
+  |---|---:|---|
+  | Không có `67` | 64-bit | Dùng địa chỉ theo quy tắc 64-bit |
+  | Có `67` | 32-bit | Dùng địa chỉ theo quy tắc 32-bit |
+
+  </div>
+
+  Khi address size là 32-bit, các thanh ghi địa chỉ dùng trong phép tính sẽ được diễn giải theo dạng 32-bit tương ứng. Kết quả địa chỉ hiệu dụng được tính theo quy tắc 32-bit và được zero-extend lên 64-bit để tạo địa chỉ tuyến tính trong chế độ 64-bit. **Ví dụ**, nếu phép tính địa chỉ 32bit cho kết quả:
+
+  ```
+  EA32=0x12345678
+  EA32​=0x12345678
+  ```
+
+  thì địa chỉ được mở rộng thành:
+
+  ```
+  EA64=0x0000000012345678
+  EA64​=0x0000000012345678
+  ```
+
+  Nó không được sign-extend thành `0xFFFFFFFF12345678`.
+
+  **Lưu ý:** Không phải mọi cách viết địa chỉ 64-bit đều có thể được thay thế trực tiếp bằng cách thêm 67. Khi address size thay đổi, cấu trúc địa chỉ được mã hóa và các trường hợp đặc biệt của ModR/M, SIB cũng có thể thay đổi.
+
+  Ví dụ bằng mã máy x86-64. Xét lệnh `mov eax, DWORD PTR [rbx]`, một encoding hợp lệ trong chế độ 64-bit là `8B 03`. Phân tích:
+
+  <div align="center">
+
+  | Byte | Ý nghĩa |
+  |---|---|
+  | `8B` | Opcode `MOV r32, r/m32` |
+  | `03` | ModR/M: `mod=00`, `reg=000`, `r/m=011` |
+
+  </div>
+
+  ModR/M chỉ định:
+    - `reg=000`: EAX.
+    - `mod=00, r/m=011`: địa chỉ bộ nhớ `[RBX]` trong chế độ 64-bit với address size mặc định.
+  Lệnh được giải mã thành `mov eax, DWORD PTR [rbx]`. Nếu thêm prefix `67` ta có `67 8B 03` thì trong chế độ 64-bit, encoding này được giải mã theo address size 32-bit và có kết quả là `mov eax, DWORD PTR [ebx]`
+
+  Ý nghĩa là CPU sử dụng địa chỉ 32-bit trong `EBX`, rồi zero-extend kết quả thành địa chỉ 64-bit trước khi truy cập bộ nhớ. So sánh hai encoding:
+
+  ```asm
+  8B 03       → MOV EAX, DWORD PTR [RBX]
+  67 8B 03    → MOV EAX, DWORD PTR [EBX]
+  ```
+
+  Opcode `8B` và byte ModR/M `03` không thay đổi, prefix `67` làm thay đổi cách diễn giải địa chỉ. Phân biệt `66` và `67` qua một ví dụ ta xét lệnh `mov eax, DWORD PTR [rbx]`.
+
+  Nếu thêm `66`, kích thước toán hạng của lệnh `MOV` này chuyển sang 16-bit như `66 8B 03` tương ứng `mov ax, WORD PTR [rbx]`. Dữ liệu được đọc là 2 byte, địa chỉ vẫn sử dụng address size 64-bit.
+
+  Nếu thêm `67` như  `67 8B 03`, tương ứng `mov eax, DWORD PTR [ebx]`. Dữ liệu vẫn là 4 byte, nhưng địa chỉ sử dụng address size 32-bit. Từ đó ta có bảng so sánh như sau:
+
+  <div align="center">
+
+  | Encoding | Operand size | Address size | Đích |
+  |---|---:|---:|---|
+  | `8B 03` | 32-bit | 64-bit | `EAX` |
+  | `66 8B 03` | 16-bit | 64-bit | `AX` |
+  | `67 8B 03` | 32-bit | 32-bit | `EAX` |
+  | `66 67 8B 03` | 16-bit | 32-bit | `AX` |
+
+  </div>
+
+  Các encoding trên được xét trong chế độ 64-bit.
+- **nhóm Segment override:** Segment Override Prefix là prefix cho phép chỉ định segment register được sử dụng khi truy cập bộ nhớ, thay vì segment mặc định của instruction. Các byte prefix tương ứng là:
+
+  <div align="center">
+
+  | Prefix | Segment register | Tên |
+  |---|---|---|
+  | `26` | `ES` | Extra Segment |
+  | `2E` | `CS` | Code Segment |
+  | `36` | `SS` | Stack Segment |
+  | `3E` | `DS` | Data Segment |
+  | `64` | `FS` | FS Segment |
+  | `65` | `GS` | GS Segment |
+
+  </div>
+
+  Đây là các Legacy Prefixes trong bộ mã lệnh x86. Tuy nhiên, khi học x86-64, chúng ta cần chú ý một điểm: `FS` và `GS` vẫn có ý nghĩa đặc biệt trong chế độ 64-bit, trong khi các segment override khác thường không làm thay đổi địa chỉ bộ nhớ theo cách chúng từng làm trong chế độ 32-bit.
+
+  Trong kiến trúc x86 truyền thống, địa chỉ bộ nhớ có thể được hình thành thông qua cơ chế phân đoạn (segmentation). Các segment register gồm:
+
+  ```
+  CS    Code Segment
+  DS    Data Segment
+  SS    Stack Segment
+  ES    Extra Segment
+  FS    Additional Segment
+  GS    Additional Segment
+  ```
+
+  Trong chế độ 32-bit, các segment register có thể tham gia vào quá trình hình thành địa chỉ tuyến tính. **Ví dụ**, một lệnh truy cập bộ nhớ có thể sử dụng segment mặc định tùy thuộc vào loại địa chỉ:
+
+  ```asm
+  mov eax, [ebx]       ; Thông thường dùng DS
+  mov eax, [ebp]       ; Thông thường dùng SS
+  ```
+
+  Ở đây, `EBX` thường dẫn đến việc sử dụng `DS`, còn địa chỉ dựa trên `EBP` mặc định sử dụng `SS`. Có thể hình dung đơn giản:
+
+  ```
+  Effective Address
+         |
+         v
+  Segment Selection
+         |
+         v
+  Linear Address
+         |
+         v
+  Memory Access
+  ```
+
+  Đây là mô hình khái quát. Chi tiết chuyển đổi địa chỉ phụ thuộc vào chế độ hoạt động của CPU và cấu hình phân đoạn. Để biết cách Segment Override Prefix hoạt động ta xét lệnh `mov eax, [ebx]`. Trong chế độ 32-bit, lệnh này thông thường sử dụng segment `DS`. Nếu muốn chỉ định segment `FS`, có thể viết `mov eax, fs:[ebx]`. Mã máy tương ứng có dạng `64 8B 03`, ta phân tích từng byte như sau :
+
+  <div align="center">
+
+  | Byte | Ý nghĩa |
+  |---|---|
+  | `64` | Segment override prefix: `FS` |
+  | `8B` | Opcode: `MOV r32, r/m32` |
+  | `03` | ModR/M: chỉ định thanh ghi đích và địa chỉ bộ nhớ |
+
+  </div>
+
+  Lệnh được giải mã thành `mov eax, DWORD PTR fs:[ebx]`. Trong chế độ 32-bit, địa chỉ tuyến tính được hình thành từ địa chỉ hiệu dụng cộng với segment base, theo cơ chế phân đoạn đang được thiết lập. Trong chế độ 64-bit, kiến trúc đơn giản hóa phần lớn cơ chế phân đoạn đối với các địa chỉ thông thường. Cụ thể:
+  - `CS`, `DS`, `ES` và `SS` thường có segment base bằng 0 trong chế độ 64-bit.
+  - Các segment override tương ứng thường không làm thay đổi địa chỉ tuyến tính của những truy cập bộ nhớ thông thường.
+  - `FS` và `GS` vẫn có thể có segment base khác 0.
+  - Vì vậy, `FS` và `GS` có thể làm thay đổi địa chỉ bộ nhớ thực tế được truy cập.
+Với các truy cập bộ nhớ thông thường, có thể mô hình hóa địa chỉ tuyến tính trong chế độ 64-bit như sau `Linear Address = Effective Address + Segment Base`. Trong đó, `FS` và `GS` có thể đóng góp một segment base khác 0.
+
+  **Ví dụ:** FS trong mã máy x86-64, `mov eax, DWORD PTR fs:[rax]` lệnh này có encoding `64 8B 00`. Phân tích, `64` là FS segment override, `8B` là `MOV r32, r/m32`, `00` là ModR/M trong đó ModR/M `00` có `mod=00, reg=000, r/m=000` (tất cả đều là `0` theo byte của nó). Trong chế độ 64-bit với address size mặc định, trường `r/m=000` chỉ địa chỉ dựa trên RAX.
+
+  Vì có prefix FS, CPU truy cập địa chỉ dựa trên `Linear Address = RAX + FS.base`. Giả sử:
+
+  ```
+  RAX     = 0x1000
+  FS.base = 0x70000000
+  ```
+
+  Thì ta có `Linear Address = 0x1000 + 0x70000000 = 0x70001000`.Đây là ví dụ minh họa cách tính địa chỉ, giá trị `FS.base` thực tế phụ thuộc cấu hình hệ thống và tiến trình. Từ đây chúng ta có bảng so sánh dưới đây để phân biệt Operand-size override và Address-size override với Segment override khác nhau như thế nào
+
+  <div align="center">
+
+  | Prefix | Ví dụ | Chức năng |
+  |---|---|---|
+  | Operand-size override | `66` | Thay đổi kích thước toán hạng theo quy tắc của instruction |
+  | Address-size override | `67` | Thay đổi kích thước địa chỉ được sử dụng |
+  | Segment override | `64` | Chọn segment `FS` cho truy cập bộ nhớ |
+
+  </div>
+
+  - **Nhóm REX:** cái nhóm này đã được nêu rõ ở phần đầu rồi, có thể xem lại ở phần [3. REX Prefix](#3-rex-prefix). REX là nhóm prefix đặc biệt trong chế độ 64-bit, có giá trị từ `0x40` đến `0x4F`. Nó có cấu trúc `0100WRXB`, tuy nhiên mấy nhóm còn lại như Operand-Size Override, address-size override, Lock, Rep chúng chỉ có các byte riêng lẻ của chúng, chúng ko có cấu trúc `0100WRXB` như rex prefix
+
+---
+
+## 4. ModR/M Byte
+### 4.1. ModR/M là gì?
+
+ModR/M byte là một byte trong instruction encoding của x86/x86-64, dùng để xác định cách chỉ định toán hạng chẳng hạn thanh ghi nào được sử dụng, hoặc toán hạng có nằm trong bộ nhớ hay không. ModR/M là viết tắt của Mod, Register, Memory/Register. Một byte này được chia thành ba trường bit là `mod`, `reg` và `r/m`.
+
+### 4.2. Cấu trúc ModR/M
+
+ModR/M luôn có độ dài 1 byte = 8 bit:
+
+<p align="center">
+	<img src="image/image5.png" alt="cấu trúc ModR/M">
+</p>
+
+**Trong đó:**
+- `mod:` xác định cách diễn giải toán hạng `r/m`, ví dụ dùng thanh ghi trực tiếp hay địa chỉ bộ nhớ.
+- `reg:` chỉ định một thanh ghi hoặc một trường opcode mở rộng, tùy instruction.
+- `r/m:` chỉ định thanh ghi hoặc toán hạng bộ nhớ, tùy mod và dạng mã hóa.
+> [!IMPORTANT]
+> **Điểm quan trọng:** `reg` và `r/m` không phải lúc nào cũng chỉ thanh ghi. Ý nghĩa cụ thể còn phụ thuộc vào opcode và các prefix.
+
+### 4.3. Giải mã ModR/M bằng tay
+
+Ở các phần trước, chúng ta đã biết ModR/M byte có nhiệm vụ mã hóa thông tin về toán hạng của instruction. Tuy nhiên, để hiểu cách machine code được diễn giải thành assembly, chúng ta cần thực hành giải mã byte này bằng tay. Quá trình giải mã gồm các bước:
+- 1. Xác định opcode và quy tắc encoding của instruction.
+- 2. Chuyển ModR/M byte từ hexadecimal sang nhị phân.
+- 3. Tách 8 bit thành ba trường mod, reg và r/m.
+- 4. Dựa vào opcode, chế độ hoạt động và các prefix để diễn giải từng trường.
+- 5. Kết hợp các trường để xác định toán hạng và viết lại instruction assembly.
+
+**Ví dụ:** Giải mã `89 D8`, ta đã biết `89` là opcode của dạng `MOV r/m32, r32` khi không có prefix thay đổi độ rộng toán hạng trong chế độ 64 bit. Byte D8 là ModR/M. Đầu tiên, chuyển nó sang nhị phân $$\large\texttt{D8}_{16}=\texttt{11011000}_2$$ và chúng ta tách 3bit thành 3 trường :
+
+```
+D8 =  11     011   000
+     ├─┤   ├───┤ ├───┤
+     mod    reg   r/m
+     |      |     |
+     11     011   000
+```
+
+- **Bước 1:** là giải mã trường mod, trong đó `mod = 11`, trong ModR/M, `mod = 11` cho biết trường r/m chỉ một thanh ghi thay vì toán hạng bộ nhớ.
+- **Bước 2:** là giải mã trường reg, `reg = 011`. Với dạng instruction đang xét và không có REX.R, mã 011 chỉ thanh ghi EBX ở độ rộng 32 bit.
+- **Bước 3:** Giải mã trường r/m, ta có  `r/m = 000`, Do `mod = 11`, trường này chỉ thanh ghi EAX ở độ rộng 32 bit
+- **Bước 4:** Kết hợp với opcode, Opcode `89` xác định dạng `MOV r/m32, r32`. Trong dạng này, trường reg là toán hạng nguồn, còn trường r/m là toán hạng đích. Vì vậy `mov eax, ebx` là Instruction sao chép 32 bit từ EBX sang EAX. Trong chế độ 64 bit, việc ghi vào EAX đồng thời đặt 32 bit cao của RAX về 0.
+
+---
+
+## 5. SIB Byte
+### 5.1. SIB là gì?
+
+SIB byte (Scale-Index-Base byte) là một byte trong mã máy x86/x86-64, dùng để mã hóa cách truy cập bộ nhớ bằng sự kết hợp của thanh ghi cơ sở (Base), thanh ghi chỉ số (Index) và hệ số nhân (Scale). Nói đơn giản ModR/M cho biết cấu trúc địa chỉ bộ nhớ ở mức cơ bản; khi cần cách tính địa chỉ phức tạp hơn, nó có thể chỉ định thêm một byte SIB
+
+### 5.2. Cấu trúc SIB
+
+SIB gồm 8 bit, chia thành ba trường:
+
+<p align="center">
+	<img src="image/image6.png" alt="cấu trúc sib byte">
+</p>
+
+Trong đó :
+- **trường Scale:** chiếm 2bit. Tác dụng là chọn hệ số nhân của Index: `1`, `2`, `4` hoặc `8`
+- **trường Index:**	chiếm 3bit. Tác dụng là mã hóa thanh ghi index
+- **trường Base:** chiếm 3bit. Tác dụng là mã hóa thanh ghi base
+
+Công thức địa chỉ tổng quát là `EA = Base + Index x scale + Displacement`. Trong đó EA là effective address (địa chỉ hiệu dụng). Displacement nằm ở trường riêng của instruction nếu encoding yêu cầu, nó không nằm bên trong SIB.
+
+### 5.3. Giải mã SIB bằng tay
+
+Xét instruction sau `mov eax, DWORD PTR [rbx + rcx*4 + 8]`. Một encoding hợp lệ trong x86-64 là `8B 44 8B 08`, trong đó `8B` là opcode, `44` là ModR/M, `8B` là SIB, `08` là displacement. Bây giờ sự vào byte sib là `8B` ta tiến hành giải mã như sau :
+
+```
+8B = 10001011
+     10 001 011
+     ── ─── ───
+     SS Index Base
+```
+
+Ta thấy `SS = 10` suy ra `Scale = 4`, `Index = 001` suy ra thanh ghi `RCX`, `Base = 011` suy ra thanh ghi `RBX`, cộng thêm byte displacement là `08` vậy giờ ghép lại vào công thức tính địa chỉ ta có `EA = RBX + RCX x 4 + 8` và CPU sử dụng địa chỉ đó để đọc 4 byte vào `EAX`.
+- **Nhưng làm sao Debugger biết phải đọc SIB?:** Debugger không nhìn byte `8B` rồi tự đoán rằng byte tiếp theo là SIB. Nó giải mã lần lượt:
+  - **Bước 1:** `8B` là dạng `MOV r32, r/m32` trong trường hợp này.
+  - **Bước 2:** Ta thấy và cho `ModR/M = 44` từ đó giải mã thành như sau:
+
+    ```
+    44 = 01000100
+    -------------
+      01  000 100
+      mod reg r/m
+    ```
+
+    **Trong đó:**
+      - `mod = 01`: dạng địa chỉ bộ nhớ có displacement 8-bit.
+      - `reg = 000`: thanh ghi đích EAX.
+      - `r/m = 100`: trong dạng địa chỉ này, báo rằng có byte SIB tiếp theo.
+  - **Bước 3:** Ta thấy và cho `SIB = 8B`, Debugger giải mã Base, Index và Scale như ví dụ trên.
+  - **Bước 4:** Ta cho `Displacement = 08`. Đọc thêm một byte displacement có dấu, ở đây là `+8`.
+
+  Vì vậy, chuỗi encoding được hiểu như sau
+
+  <p align="center">
+    <img src="image/image9.png" alt="chuỗi encoding">
+  </p>
+
+> [!IMPORTANT]
+> **Điều quan trọng nhất cần thuộc ở giai đoạn này:** ModR/M quyết định có SIB hay không, còn SIB mã hóa cách kết hợp Base, Index và Scale để tính địa chỉ.
+
+---
+
+## 6. Object Code và ELF
+
+Object code là mã máy được tạo ra từ quá trình biên dịch hoặc lắp ráp, thường đi kèm với thông tin cần thiết để liên kết chương trình. Còn ELF là một định dạng tệp quy định cách tổ chức mã máy và các thông tin liên quan để linker, loader và những công cụ phân tích có thể xử lý.
+
+> [!NOTE]
+> **Điểm cần phân biệt:** Object code là khái niệm về nội dung mã, ELF là một định dạng chứa nội dung đó. ELF không đồng nghĩa với mã máy.
+
+### 6.1. Object code là gì?
+
+Object code là mã được tạo ra sau khi mã nguồn được chuyển đổi qua compiler hoặc assembler. Trong ngữ cảnh x86-64, nó thường chứa các byte mã máy, nhưng một object file thực tế còn có thể chứa dữ liệu, symbol, relocation và các metadata khác. **Ví dụ** Assembly:
+
+```asm
+global _start
+
+section .text
+_start:
+    mov eax, 1
+    ret
+```
+
+Biên dịch bằng NASM `nasm -f elf64 asm.asm -o asm.o`. Tệp `asm.o` là một object file, object Code là mã được tạo ra sau khi mã nguồn được chuyển đổi qua compiler hoặc assembler còn object file là nơi chứa các mã đó. Ta có thể xem các byte trong section `.text` bằng `objdump -d -Mintel asm.o`. **Ví dụ** output:
+
+```asm
+0000000000000000 <_start>:
+   0: b8 01 00 00 00    mov eax, 1
+   5: c3                ret
+```
+
+**Ở đây:**
+
+<div align="center">
+
+| Byte	| Instruction	| Ý nghĩa |
+|:-|-:|:-|
+| `B8 01 00 00 00` |	`mov eax, 1` |	Nạp giá trị 1 vào EAX |
+| `C3`	| `ret` |	Trở về địa chỉ trả về trên stack |
+
+</div>
+
+Đó là các byte mã máy. Tuy nhiên, trong object file, địa chỉ và các tham chiếu có thể chưa được linker giải quyết hoàn toàn.
+
+### 6.2. ELF là gì?
+
+ELF là viết tắt của Executable and Linkable Format. Đây là định dạng nhị phân được sử dụng trên nhiều hệ thống Unix-like, bao gồm Linux, cho executable, object file, shared library và một số loại tệp khác. Một tệp ELF không chỉ chứa instruction. Nó có cấu trúc để các công cụ biết dữ liệu nào nằm ở đâu và cần xử lý như thế nào. Nó có cấu trúc :
+
+<p align="center">
+<img src="image/image10.png" alt="cấu trúc ELF">
+</p>
+
+Một số section chúng ta thường gặp:
+
+<div align="center">
+
+| Section |	Chức năng |
+|-|-|
+| `.text` |	Thường chứa instruction của chương trình |
+| `.rodata` |	Dữ liệu chỉ đọc, chẳng hạn chuỗi hằng |
+| `.data` |	Dữ liệu đã khởi tạo, có thể ghi |
+| `.bss` | Dữ liệu chưa khởi tạo tường minh, thường được cấp phát và khởi tạo bằng 0 khi chạy |
+| `.symtab`	| Bảng symbol phục vụ liên kết và phân tích, nếu có |
+| `.rela.text`	| Thông tin relocation liên quan đến section `.text` trên các ELF sử dụng kiểu relocation này |
+
+</div>
+
+Không phải ELF nào cũng có đầy đủ tất cả các section trên. Chẳng hạn, executable đã được strip có thể không còn `.symtab`.
+
+### 6.3. Code Section
+
+Trong ELF, Code Section thường chỉ section chứa mã máy của chương trình, phổ biến nhất là section `.text`. Đây là nơi lưu các instruction mà CPU sẽ thực thi sau khi mã được nạp vào bộ nhớ. Cho **ví dụ:**
+
+```asm
+global _start
+
+section .text
+_start:
+    mov eax, 1
+    mov ebx, 0
+    ret
+```
+
+trong mã nguồn ta thấy có dòng `section .text`, nghĩa là nó yêu cầu NASM đặt các byte được sinh ra từ phần mã tiếp theo vào section `.text`. Sau khi assemble, các instruction được mã hóa thành byte:
+
+```
+B8 01 00 00 00    ; mov eax, 1
+BB 00 00 00 00    ; mov ebx, 0
+C3                ; ret
+```
+
+Đó là các byte mã máy nằm trong .text của object file, với điều kiện mã nguồn được assemble đúng như ví dụ.
+
+- **Section .text nằm ở đâu trong ELF?:** Có thể hình dung ELF như một tệp có nhiều vùng dữ liệu được phân loại:
+
+  <p align="center">
+    <img src="image/image11.png" alt="vùng dữ liệu được phân loại">
+  </p>
+
+  **lưu ý:** `.text` là tên section phổ biến theo quy ước, không phải mọi section chứa mã đều bắt buộc phải mang tên `.text`.
+
+Phân biệt Section với Segment. Đây là điểm quan trọng khi học ELF để reverse engineering. Dựa vào đó, ta có bảng so sánh như sau:
+
+<div align="center">
+
+| Section |	Segment |
+|:-|:-|
+| Phân loại nội dung phục vụ liên kết và phân tích |	Mô tả các vùng cần ánh xạ khi nạp chương trình |
+| Được mô tả trong section header table |	Được mô tả trong program header table |
+| **Ví dụ:** `.text`, `.data`, `.rodata` |	**Ví dụ:** `LOAD`, `GNU_STACK`, `DYNAMIC` |
+
+</div>
+
+Một section `.text` có thể nằm bên trong một `PT_LOAD` segment có quyền thực thi. Nhưng section và segment không phải cùng một thứ: segment có thể chứa nhiều section, và loader chủ yếu dựa vào program headers chứ không cần section header table để nạp executable thông thường.
+
+### 6.3. Relocation
+
+Relocation là quá trình điều chỉnh các tham chiếu địa chỉ trong mã máy hoặc dữ liệu khi linker hoặc loader xác định được vị trí mà chúng cần trỏ tới. Trong ELF, relocation còn là tên gọi của cơ chế và các bản ghi mô tả những vị trí cần được điều chỉnh.
+
+Để hiểu tại sao cần relocation, mày hãy tưởng tượng đang viết Assembly và muốn gọi một hàm nằm trong một tệp object khác. Khi NASM tạo `asm.o`, nó có thể chưa biết chính xác địa chỉ cuối cùng của hàm đó. Linker cần xử lý tham chiếu ấy khi ghép các object file lại.
+
+**Vấn đề:** assembler chưa biết địa chỉ cuối cùng, cho hai tệp hợp ngữ như sau:
+
+<div align="center">
+<table>
+<tr>
+<td>
+
+> main.asm
+
+```asm
+global _start
+extern hello
+
+section .text
+_start:
+    call hello
+    ret
+```
+
+</td>
+<td>
+
+> hello.asm
+
+```asm
+global hello
+
+section .text
+hello:
+    ret
+```
+
+</td>
+</tr>
+</table>
+</div>
+
+Khi assemble `main.asm`, NASM biết rằng call cần gọi `hello`, nhưng `hello` nằm trong object file khác. Địa chỉ cuối cùng của nó còn phụ thuộc vào quá trình liên kết.
+
+Trên x86-64, lệnh `call rel32` thường mã hóa một độ lệch tương đối 32-bit có dấu, tính từ địa chỉ instruction tiếp theo đến đích gọi. Nếu chưa biết đích, assembler chưa thể điền giá trị cuối cùng một cách chính xác. Đây là lúc relocation phát huy tác dụng. Cách relocation hoạt động:
+
+<p align="center">
+<img src="image/image12.png" alt="cách relocation hoạt động">
+</p>
+
+Một relocation entry thường mô tả những thông tin như:
+
+<div align="center">
+
+| Thành phần |	Ý nghĩa |
+|:-|:-|
+| Offset |	Vị trí trong section cần được xử lý |
+| Type |	Quy tắc tính toán relocation |
+| Symbol |	Symbol mà tham chiếu liên quan đến |
+| Addend |	Giá trị cộng thêm trong phép tính relocation |
+
+</div>
+
+Không phải mọi relocation entry đều lưu tất cả các trường theo cùng một cách. Chẳng hạn, ELF64 có thể sử dụng `RELA`, trong đó addend được lưu rõ trong relocation entry. Cho **Ví dụ cụ thể** `call hello`, Trên x86-64, call rel32 có dạng mã hóa thông thường là `E8 xx xx xx xx` trong đó `E8` là opcode của near relative call còn bốn byte `xx` là độ lệch tương đối 32-bit có dấu.
+
+CPU tính địa chỉ đích theo công thức `Target = NextRIP + disp32`, trong đó `NextRIP` là địa chỉ ngay sau instruction call còn `disp32` là độ lệch được mã hóa trong bốn byte tiếp theo. Giả sử sau khi liên kết:
+
+```
+Địa chỉ call:   0x401000
+Địa chỉ kế tiếp: 0x401005
+Địa chỉ hello:  0x401020
+```
+
+Khi đó nó sẽ tính `disp32 = 0x401020 - 0x401005 = 0x1B`, giống nhưng tính phương trình cơ bản của toán học và Instruction sẽ được mã hóa thành `E8 1B 00 00 00`. Đây là minh họa cho kết quả cuối cùng. Trong thực tế, linker sử dụng relocation type phù hợp để tính giá trị và điền vào đúng vị trí.
+
+> [!NOTE]
+> **Lưu ý:** Relocation không nhất thiết có nghĩa là sửa toàn bộ instruction. Trong ví dụ này, linker thường chỉ cần điền bốn byte displacement, giữ nguyên opcode `E8`.
+
+### 6.4. Symbol và Symbol Table
+
+Trong ELF và quá trình liên kết chương trình, Symbol là một mục định danh một thực thể mà chương trình hoặc trình liên kết cần tham chiếu; còn Symbol Table là bảng lưu thông tin về các symbol đó. Để hiểu chính xác, chúng ta nên phân biệt ba thứ: tên trong source code, symbol, và địa chỉ máy.
+
+Symbol (ký hiệu) là một định danh mà assembler, linker hoặc debugger sử dụng để tham chiếu đến một thực thể trong chương trình. **Ví dụ**, viết một file NASM:
+
+```asm
+global _start
+
+section .text
+_start:
+    mov eax, 60
+    xor edi, edi
+    syscall
+
+hello:
+    ret
+```
+
+Trong ví dụ này:
+- `_start` là symbol đại diện cho vị trí bắt đầu đoạn mã của chương trình.
+- `hello` là symbol đại diện cho vị trí của lệnh `ret`.
+- `60` và `0` là các giá trị immediate, không phải symbol trong ví dụ này.
+
+Symbol không nhất thiết phải là một hàm. Nó có thể đại diện cho một hàm, biến, nhãn hoặc một đối tượng khác tùy ngữ cảnh. Ví dụ trong C:
 
 ```c
-#define _DEFAULT_SOURCE
+int counter = 10;
+
+int add(int a, int b) {
+    return a + b;
+}
+```
+
+Các tên counter và add có thể trở thành symbol trong file object. Tuy nhiên, không phải mọi tên xuất hiện trong source code đều được giữ lại thành symbol trong file đầu ra.
+
+còn Symbol Table (bảng ký hiệu) là bảng chứa các bản ghi mô tả symbol. Trong ELF, một symbol entry có thể chứa các trường như:
+
+<div align="center">
+
+| Trường |	Ý nghĩa |
+|:-|:-|
+| `st_name`	| Offset đến tên symbol trong string table |
+| `st_value`	| Giá trị symbol, thường là địa chỉ hoặc offset tùy loại file và symbol |
+| `st_size`	| Kích thước đối tượng được symbol đại diện, nếu xác định được |
+| `st_info`	| Thông tin về loại symbol và binding |
+| `st_other`	| Thông tin thuộc tính khác |
+| `st_shndx`	| Section index liên quan đến symbol |
+
+</div>
+
+> [!NOTE]
+> **Điểm cần nhớ:** Symbol Table không đơn giản chỉ là bảng tên hàm. Nó lưu metadata để linker, debugger và các công cụ phân tích hiểu những symbol đó đại diện cho gì.
+
+Cách xem Symbol Table bằng readelf, chúng ta tạo file `symbol.asm` và xét hợp ngữ sau :
+
+```asm
+global _start
+
+section .text
+_start:
+    mov eax, 60
+    xor edi, edi
+    syscall
+
+hello:
+    ret
+```
+
+Assemble thành ELF relocatable object `nasm -f elf64 symbol.asm -o symbol.o`. Xem bảng symbol thì ta dùng `readelf -s symbol.o`. Kết quả sẽ có dạng tương tự:
+
+```
+Symbol table '.symtab' contains ... entries:
+   Num:    Value          Size Type    Bind   Vis      Ndx Name
+     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+     1: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT    1 _start
+     2: 0000000000000009     0 NOTYPE  LOCAL  DEFAULT    1 hello
+```
+
+Đây là kết quả minh họa, offset và cách hiển thị cụ thể có thể khác tùy công cụ và file. Cách đọc:
+- `Value`: `_start` có giá trị 0 trong section của nó, hello có giá trị 9, tức offset 9 byte tính từ đầu section `.text` trong ví dụ này.
+- `Type`: `NOTYPE` có nghĩa loại symbol chưa được chỉ rõ là function hay object. NASM không nhất thiết tự đánh dấu nhãn thành `FUNC`.
+- `Bind`: `GLOBAL` cho biết `_start` có global binding, `LOCAL` cho biết `hello` chỉ có phạm vi liên kết cục bộ.
+- `Ndx`: 1 ở đây là chỉ số section chứa symbol, thường tương ứng `.text`, `UND` có nghĩa undefined, tức symbol chưa được định nghĩa trong file hiện tại.
+
+> [!NOTE]
+> Lưu ý: `Value = 0` ở file `.o` không có nghĩa chương trình sẽ chạy tại địa chỉ 0. Đây là file relocatable nên giá trị thường là offset tương đối với section, địa chỉ cuối cùng còn phụ thuộc quá trình link và cách nạp chương trình.
+
+- **Symbol liên quan thế nào đến Linker và Relocation?:** Xét hai file assembly riêng biệt.
+  > main.asm
+
+  ```asm
+  global _start
+  extern hello
+
+  section .text
+  _start:
+      call hello
+      mov eax, 60
+      xor edi, edi
+      syscall
+  ```
+
+  > hello.asm
+
+  ```asm
+  global hello
+
+  section .text
+  hello:
+      ret
+  ```
+
+  Assemble từng file `nasm -f elf64 main.asm -o main.o` và `nasm -f elf64 hello.asm -o hello.o`. Kiểm tra symbol trong `main.o` ta dùng `readelf -s main.o`. Trong `main.o`, symbol `hello` có thể xuất hiện với `Ndx = UND` vì file này biết tên `hello` nhưng chưa chứa định nghĩa của nó.
+
+  <p align="center">
+    <img src="image/image13.png" alt="hình ảnh kết quả lệnh readelf -s main.o">
+  </p>
+
+  Kiểm tra relocation ta dùng `readelf -r main.o` và `objdump -dr -Mintel main.o`:
+
+  <p align="center">
+    <img src="image/image14.png" alt="hình ảnh kết quả lệnh readelf -r main.o và objdump -dr -Mintel main.o">
+  </p>
+
+  Ta thấy lệnh `call hello` cần địa chỉ đích để tính displacement tương đối của lệnh `call`. Vì `hello` được định nghĩa trong file khác, assembler có thể để lại một relocation entry để linker xử lý. Sau đó link `ld main.o hello.o -o program`. Lúc này, linker tìm định nghĩa hello trong các object file đầu vào, xác định vị trí cuối cùng và xử lý relocation tương ứng. Quá trình này cho thấy hai cấu trúc có liên quan nhưng khác nhau:
+  - **Symbol Table:** cung cấp thông tin về symbol, bao gồm tên, loại, binding và vị trí liên quan.
+  - **Relocation Table:** ghi lại những vị trí cần được hiệu chỉnh và thông tin cần thiết để linker hoặc thành phần liên kết tiếp theo thực hiện việc đó.
+
+  Không phải symbol nào cũng cần relocation; relocation chỉ cần khi có tham chiếu cần được xử lý hoặc hiệu chỉnh.
+
+Phân biệt `.symtab` và `.dynsym`. Trong ELF, ta có thể gặp hai bảng symbol thường thấy:
+
+<div align="center">
+
+| Bảng |	Mục đích |
+|:-|:-|
+| `.symtab`	| Bảng symbol đầy đủ hơn phục vụ liên kết và phân tích, thường có thể bị loại bỏ khi strip |
+| `.dynsym`	| Bảng symbol phục vụ liên kết động, chẳng hạn giữa executable và shared libraries |
+
+</div>
+
+Không phải ELF nào cũng có cả hai. Một executable liên kết tĩnh, một object file hoặc một file đã bị strip có thể có cấu trúc khác nhau. Các lệnh hữu ích:
+
+```bash
+readelf -S program       # Xem section headers
+readelf -s program       # Xem symbol tables
+nm -n program            # Liệt kê symbol theo giá trị
+objdump -t program       # Hiển thị bảng symbol
+```
+
+> [!IMPORTANT]
+> Symbol là định danh gắn với một thực thể hoặc vị trí trong chương trình, Symbol Table là cấu trúc dữ liệu lưu metadata của các symbol. Linker sử dụng thông tin này để liên kết các tham chiếu giữa những object file và xử lý các relocation cần thiết.
+
+### 6.5. Từ Object File đến Executable
+
+Trong quy trình biên dịch và liên kết trên Linux x86-64, Object File sang Executable là quá trình biến các file object có thể còn tham chiếu chưa được giải quyết thành một file thực thi có cấu trúc phù hợp để hệ điều hành nạp và chạy. Ta cần hiểu 4 việc chính:
+
+<table>
+<tr>
+<td>
+
+- **1.Symbol resolution — giải quyết symbol:** xác định symbol được tham chiếu được định nghĩa ở đâu.
+- **2.Relocation — hiệu chỉnh tham chiếu:** tính và ghi các giá trị địa chỉ hoặc displacement cần thiết.
+- **3.Layout:** sắp xếp các section thành các vùng nhớ và segment phù hợp.
+- **4.Executable generation:** tạo file ELF executable với entry point và program headers.
+
+</td>
+
+<td>
+	<kbd>
+  <img src="image/image15.png" alt="hình ảnh object file đến executable" style="width: 1200px; max-width: none; height: auto;">
+	<kbd>
+</td>
+</tr>
+</table>
+
+Không phải mọi file đều trải qua các bước giống hệt nhau. Ví dụ này là mô tả sơ đồ khi dùng NASM, ELF64 và GNU ld trên Linux.
+
+> [!NOTE]
+> **Lưu ý:** linker không chạy chương trình. Linker tạo executable; kernel chịu trách nhiệm nạp chương trình khi ta thực thi nó.
+
+Cho ví dụ để quan sát hai Object File liên kết với nhau như thế nào. Ta tạo hai file assembly:
+
+<div align="center">
+<table>
+<tr>
+<td>
+
+> main.asm
+
+```asm
+global _start
+extern hello
+
+section .text
+_start:
+    call hello
+
+    mov eax, 60
+    xor edi, edi
+    syscall
+```
+
+</td>
+<td>
+
+> hello.asm
+
+```asm
+global hello
+
+section .text
+hello:
+    ret
+```
+
+</td>
+</tr>
+</table>
+</div>
+
+**Ở đây:**
+- `global hello`: công khai symbol hello để file object khác có thể liên kết tới nó.
+- `extern hello`: khai báo rằng `hello` được định nghĩa bên ngoài file này.
+- `call hello`: tham chiếu đến symbol `hello`, nhưng khi assemble riêng `main.asm`, assembler chưa biết địa chỉ cuối cùng của `hello`.
+
+Bước 1, Assemble thành Object File, ta dùng lệnh biên dịch `nasm -f elf64 main.asm -o main.o` và `nasm -f elf64 hello.asm -o hello.o`. Lúc này có hai file `main.o`, `hello.o`. Sau đó ta kiểm tra loại file, dùng lệnh `file main.o hello.o`
+
+<p align="center">
+  <img src="image/image16.png" alt="file result">
+</p>
+
+Cả hai đều là ELF relocatable object (ET_REL), chưa phải executable hoàn chỉnh. Bước 2, ta kiểm tra Symbol Table, để làm được việc này thì ta dùng hai lệnh `readelf -s main.o` và `readelf -s hello.o`
+
+<p align="center">
+  <img src="image/image17.png" alt="kiểm tra symbol table">
+</p>
+
+Trong `main.o`, symbol `hello` được khai báo nhưng chưa được định nghĩa trong file đó. Nó thường có `Ndx = UND` — undefined. Trong `hello.o`, symbol `hello` được định nghĩa tại một vị trí thuộc section `.text`.
+
+<div align="center">
+
+| File |	Symbol |	Trạng thái |
+|:-:|:-:|:-|
+| `main.o` |	`_start` |	Đã định nghĩa |
+| `main.o`	| `hello` |	Chưa định nghĩa trong file này |
+| `hello.o`	| `hello` |	Đã định nghĩa |
+
+</div>
+
+Đây là lý do linker cần Symbol Table: nó dùng thông tin symbol để tìm định nghĩa tương ứng với những tham chiếu chưa được giải quyết. Bước 3, là kiểm tra Relocation Table, để kiểm tra phần này ta dùng lệnh `readelf -r main.o` và `objdump -dr -Mintel main.o`, kết quả như sau :
+
+<p align="center">
+  <img src="image/image18.png" alt="kiểm tra relocation table">
+</p>
+
+Trong `main.o`, lệnh `call hello` có thể đi kèm một relocation entry. Trước khi liên kết, mã máy của `call rel32` có dạng tổng quát:
+
+```
+E8 xx xx xx xx
+│  └─────────┘
+│   disp32 chưa được giải quyết
+└── opcode CALL
+```
+
+`disp32` là displacement có dấu 32 bit. CPU tính địa chỉ đích của lệnh gọi bằng:
+
+<div align="center">
+
+$$\Large
+\text{Target}=\text{RIP}_{\text{next}}+\text{signext(disp32)}
+$$
+
+</div>
+
+Trong file object, assembler chưa biết vị trí cuối cùng của hello, nên nó để lại thông tin relocation để linker xử lý. Với relocation PC-relative, phép tính thường có dạng `D=S+A-P`. Trong đó:
+- `S`: giá trị địa chỉ của symbol đích.
+- `A`: addend, tức giá trị cộng thêm theo quy ước relocation.
+- `P`: địa chỉ của vị trí relocation.
+- `D`: giá trị cần ghi vào trường displacement.
+Với các relocation `rel32` của x86-64, addend thường bù cho việc CPU tính tương đối từ địa chỉ ngay sau lệnh. Cách biểu diễn cụ thể phụ thuộc relocation type.
+
+> [!IMPORTANT]
+> **Điểm quan trọng:** relocation entry không phải là một lệnh CPU. Nó là metadata để linker biết cần sửa chỗ nào và sửa như thế nào.
+
+Bước 4, là bước link thành Executable, cái này đơn giản, chỉ cần link các file object lại thành một chương trình mà có thể nạp vào, thực thi chuẩn bài bản của hệ thống. Ta dùng lệnh `ld main.o hello.o -o program`. Lệnh này yêu cầu linker kết hợp hai object file thành executable program. Về mặt khái niệm, linker thực hiện:
+- 1.Tìm định nghĩa của hello trong hello.o.
+- 2.Xác định vị trí của các section trong executable.
+- 3.Tính displacement của call hello.
+- 4.Ghi giá trị thích hợp vào trường disp32.
+- 5.Tạo ELF executable chứa entry point và program headers.
+Ta có thể kiểm tra kết quả với các lệnh sau :
+
+```bash
+file program
+readelf -h program
+readelf -l program
+objdump -d -Mintel program
+```
+
+Kết quả đầu ra có thể như sau :
+
+<div align="center">
+<table>
+<tr>
+<td>
+
+> thực hiện hai lệnh `file program` và `readelf -h program`
+
+<p align="center">
+  <img src="image/image19.png" alt="kiểm tra ELF executable">
+</p>
+</td>
+<td>
+
+> thực hiện hai lệnh `readelf -l program` và `objdump -d -Mintel program`
+
+<p align="center">
+  <img src="image/image20.png" alt="kiểm tra ELF executable">
+</p>
+</td>
+</tr>
+</table>
+</div>
+
+Trong `readelf -h`, chú ý trường `Type` và `Entry point address`. Với lệnh `ld` trực tiếp theo ví dụ này, file thường là `executable ELF` kiểu `EXEC`, chi tiết phụ thuộc cấu hình linker :
+
+<p align="center">
+  <img src="image/image19.png" alt="kiểm tra ELF executable">
+</p>
+
+Trong `readelf -l`, ta sẽ thấy các program headers mô tả những segment dùng khi nạp chương trình. Đây là điểm khác với section headers mà ta xem bằng `readelf -S`.
+
+<p align="center">
+  <img src="image/image20.png" alt="kiểm tra ELF executable">
+</p>
+
+Bước 5 — Chạy thử, ta dùng `./program ; echo $?`, kết quả trả về là `0`
+
+<p align="center">
+  <img src="image/image21.png" alt="chạy thử soi kết quả trả về">
+</p>
+
+Chương trình không in gì ra màn hình. Nó gọi `hello`, quay về `_start`, rồi gọi Linux syscall `exit` với mã thoát bằng `0`. Thử strace xem :
+
+<p align="center">
+  <img src="image/image22.png" alt="chạy thử soi với strace">
+</p>
+
+kết quả đúng là `exit(0)`.
+
+- **Điều gì thực sự thay đổi từ .o sang executable?:** Ta xét bảng so sánh sau để trực quan hóa cách giải quyết vấn đề :
+
+  <div align="center">
+
+  | Thuộc tính |	Object File (.o) |	Executable |
+  |:-|:-|:-|
+  | ELF type |	`ET_REL` |	Thường là `ET_EXEC` hoặc `ET_DYN` |
+  | Section `.text` |	Có thể chứa mã máy |	Chứa mã máy đã được liên kết |
+  | Symbol |	Có thể có symbol undefined |	Các tham chiếu cần thiết cho liên kết tĩnh đã được giải quyết |
+  | Relocation |	Có thể còn relocation cần xử lý |	Nhiều relocation tĩnh đã được áp dụng, vẫn có thể còn relocation động |
+  | Địa chỉ	 | Thường là offset tương đối với section |	Địa chỉ phụ thuộc kiểu executable và cách nạp |
+  | Program headers |	Thông thường không có vai trò nạp executable như ở file thực thi |	Mô tả các segment dùng khi nạp |
+
+  </div>
+
+  **Một chi tiết nâng cao:** Executable không nhất thiết chứa địa chỉ tuyệt đối cho mọi tham chiếu. Ví dụ, `call rel32` vẫn dùng displacement tương đối; linker tính displacement thích hợp thay vì thay nó bằng một địa chỉ tuyệt đối 64 bit. Với PIE và shared libraries, một số relocation còn được xử lý lúc tải hoặc lúc liên kết động.
+
+> [!NOTE]
+> Phân biệt ba khái niệm
+> - **Symbol resolution:** xác định symbol nào đáp ứng tham chiếu đang cần giải quyết.
+> - **Relocation:** tính và áp dụng giá trị cần thiết tại vị trí được đánh dấu.
+> - **Linking:** toàn bộ quá trình kết hợp object file, giải quyết symbol, xử lý relocation và tạo đầu ra liên kết.
+>
+> **Nói ngắn gọn:** Symbol cho linker biết cần tìm cái gì; relocation cho linker biết cần sửa ở đâu và theo cách nào; linker dùng cả hai để tạo executable.
+
+---
+
+## 7. Lập trình byte program
+
+Lập trình byte program là việc tận dụng các kiến thức về instruction encode như prefix, opcode, modR/M, sib, Displacement v..v.. để tạo nên một chương trình thực thi hoàn chỉnh. Chúng ta có thể tận dụng các trình như `nasm`, `gcc` chẳng hạn để biên dịch chúng
+
+### 7.1. lập trình tích hợp byte program trên file định dạng C
+
+Ở đây, chúng ta tích hợp byte instruction với C. Nghĩa là, ta code một đoạn C và gắn một đoạn instruction encode và đoạn C đó sẽ thực hiện hành vi để thực thi cấc byte instruction encode. Cho ví dụ:
+
+```c
+#define _GNU_SOURCE
+
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
-int main(void)
-{
-   // size_t size = (size_t)sysconf(_SC_PAGESIZE);
+typedef int (*add_fn)(int, int);
+
+int main(void){
+    const uint8_t code[] = {
+        0x89, 0xF8,  // mov eax, edi
+        0x01, 0xF0,  // add eax, esi
+        0xC3         // ret
+    };
+
+    size_t size = sizeof(code);
 
     void *mem = mmap(
         NULL,
-        4096,
-        PROT_READ,
+        (size_t) sysconf(_SC_PAGESIZE),
+        PROT_READ | PROT_WRITE | PROT_EXEC,
         MAP_PRIVATE | MAP_ANONYMOUS,
         -1,
         0
@@ -584,232 +2055,512 @@ int main(void)
         return 1;
     }
 
-    strcpy(mem, "Hello, Memory Mapping!"); //lỗi xãy ra tại đây, mem nó chỉ cho đọc nhưng lại ghi vậy điều này gây SIGSEGV
+    memcpy(mem, code, size);
+    add_fn add = (add_fn) mem;
+    int result = add(10, 20);
 
-    printf("Virtual address: %p\n", mem);
-    printf("Data: %s\n", (char *)mem);
+    printf("10 + 20 = %d\n", result);
 
-    munmap(mem, 4096);
-
+    munmap(mem, (size_t) sysconf(_SC_PAGESIZE));
     return 0;
 }
 ```
 
-> thưc chất đoạn code này cũng y chang như đoạn code trên, chỉ khác là cái ví dụ này ta gạt bỏ prot write đi chỉ giữ lại read thôi
-
-Ta phân tích trước, khi ta gạt bỏ `PROT_WRITE` rồi thì vùng ánh xạ 4KiB sẽ trở thành vùng chỉ có quyền đọc, nhưng chương trình đang thực hiện ghi vào vùng này bằng `strcpy` để truyền chuỗi `"Hello, Memory Mapping!`, nhưng nó chỉ cho đọc chứ ko cho ghi, vậy nên nó phạm vào vùng read-only thì khi chạy nó sẽ nhả ra `SIGSEGV` (truy cập địa chỉ ko hợp lệ)
+kết quả như sau :
 
 <p align="center">
-<img src="image/image1.png" alt="SIGSEGV do read only">
+  <img src="image/image24.png" alt="kết quả byte instruction">
 </p>
 
-Bây giờ ta bật GDB, thử chạy `r` và khi đó GDB sẽ tiến hành bắt được đoạn hợp ngữ truy cập vào thanh ghi vùng nhớ chỉ đọc, là cái vùng ánh xạ của `mmap()`
+thực chất đây là chương trình thực hiện phép cộng thông thường thôi, nhưng với cái này chỉ phục vụ cho việc minh họa, ví dụ để có thể dễ dàng hiểu rõ hơn
+
+### 7.2. lập trình tích hợp byte program trên file định dạng hợp ngữ
+
+Phần này, chúng ta dùng hợp ngữ để tích hợp các byte instruction vào, điển hình với lệnh `db` nghĩa là nó yêu cầu `nasm` ko làm gì, chỉ thấy gì ở trong lệnh thì chèn nguyên bản hết vào file thực thi, ko thêm bớt gì. **Ví dụ:**
+
+```asm
+section .text
+	global _start
+_start:
+	db 0xB9, 0x3c, 0x00, 0x00, 0x00 ; mov ecx, 60
+	db 0x89, 0xc8 ; mov eax, ecx
+	db 0x0f, 0x05 ; syscall
+```
+
+Kết quả như sau:
 
 <p align="center">
-<img src="image/image2.png" alt="GDB debug">
+  <img src="image/image23.png" alt="kết quả byte instruction">
 </p>
 
-Ta thấy hợp ngữ bị bắt được đang truy cập vào vùng ánh xạ chỉ đọc là `mov    qword ptr [rax], rsi ` với `rsi` là tham số chứa đoạn ascii của `Hello, M` là `0x4d202c6f6c6c6548` và thanh ghi này nó cố gắn đoạn này tương ứng gắn chuỗi vào vùng nhớ ánh xạ bắt đầu tại địa chỉ `0x7ffff7f8f000` (giá trị của `rax`) nên bị `sigsegv`
-
-<p align="center">
-<img src="image/image3.png" alt="GDB debug">
-</p>
-
-Bây giờ dùng `vmmap` ta thấy bắt đầu ở cái địa chỉ ảo của vùng ánh xạ, phần `r--p` nghĩa là chỉ `read-only` vậy nên bất kỳ cách thức thực thi hay ghi vào đều bị lỗi hết. Đây là một trong những kỹ năng debug rất quan trọng góp phần giúp xác định chương trình bị `SIGSEGV` khi làm việc với vùng nhớ
-
-<sub>--đã hết phần giải thích--</sub>
+ta thấy, nó chèn trực tiếp các byte code ở trong mã nguồn mà chúng ta code sang tệp nhị phân và khi link lại với `ld` thì thành chương trình thực thi, khi chạy nó vẫn y nguyên cơ chế, hành vi để thực hiện như ý tưởng dự tính của chúng ta. Với `objdump` thì ra kết quả sang hợp ngữ đúng những gì chúng ta ghi chú trong mã nguồn chỉ khác là đầu ra của nó là hợp ngữ dạng `at&t` thay vì `intel`
 
 ---
 
-</td>
-</tr>
-</table>
-</details>
+## 8. Tổng kết
 
-### 2.5. `flags`: `MAP_PRIVATE`, `MAP_SHARED` và `MAP_ANONYMOUS`
+Sau khi đi qua toàn bộ các phần từ tổng quan về Program Encoding, cấu trúc instruction, các nhóm prefix, ModR/M, SIB cho đến Object Code, ELF và lập trình byte program, chúng ta có thể tổng hợp lại những kiến thức cốt lõi để hiểu rõ hơn cách một chương trình được biểu diễn thành machine code, cách CPU giải mã các byte đó và cách tổ chức chúng thành một chương trình có thể thực thi.
 
-Trong `mmap()`, tham số `flags` xác định cách kernel xử lý vùng bộ nhớ được ánh xạ, đặc biệt là cách vùng nhớ đó chia sẻ dữ liệu với các mapping khác và liệu nó có được liên kết với một file hay không. Ba flag quan trọng là:
-- `MAP_PRIVATE`: ánh xạ riêng tư, các thay đổi không được ghi ngược vào file nguồn.
-- `MAP_SHARED`: ánh xạ chia sẻ, các thay đổi được chia sẻ với những mapping cùng đối tượng hỗ trợ chia sẻ.
-- `MAP_ANONYMOUS`: ánh xạ bộ nhớ ẩn danh, không lấy nội dung ban đầu từ file thông thường.
+Điểm quan trọng nhất của chương này không phải là ghi nhớ toàn bộ opcode hay học thuộc các bảng encoding, mà là hiểu được các byte trong một instruction được tổ chức như thế nào, mỗi trường có vai trò gì và làm thế nào để đi từ một instruction encoding đến hành vi thực tế của CPU.
 
-#### 2.5.1. `MAP_PRIVATE` — ánh xạ riêng tư
+### 8.1. Instruction được encode như thế nào?
 
-`MAP_PRIVATE` tạo một private mapping. Những thay đổi đối với vùng nhớ không được ghi ngược vào file được ánh xạ. **Ví dụ** xét đoạn C sau :
+Như chúng ta đã tìm hiểu ở các phần trước, instruction trong kiến trúc x86-64 được biểu diễn bằng một dãy byte. Dãy byte này không phải một chuỗi dữ liệu ngẫu nhiên mà tuân theo các quy tắc encoding được định nghĩa bởi ISA.
 
-```c
-void *mem = mmap(
-    NULL,
-    4096,
-    PROT_READ | PROT_WRITE,
-    MAP_PRIVATE, // MAP_PRIVATE yêu cầu mapping có tính chất riêng tư.
-    fd,	 // nghĩa là bắt đầu ánh xạ từ byte đầu tiên của file.
-    0	// offset = 0 nghĩa là bắt đầu ánh xạ từ byte đầu tiên của file.
-);
+Một instruction có thể được cấu tạo từ những thành phần như sau:
+
+```
+┌──────────┬────────┬────────┬──────┬──────────────┬───────────┐
+│ Prefixes │ Opcode │ ModR/M │ SIB  │ Displacement │ Immediate │
+└──────────┴────────┴────────┴──────┴──────────────┴───────────┘
 ```
 
-Giả sử file ban đầu chứa `hello` khi chương trình sửa dữ liệu trong mapping thành `World` thì thay đổi đó không được ghi ngược vào file nguồn thông qua mapping này.
+Tuy nhiên, đây chỉ là mô hình tổng quát. Không phải instruction nào cũng chứa đầy đủ tất cả các thành phần trên. Việc xác định trường nào xuất hiện, kích thước của trường đó và cách diễn giải nó phụ thuộc vào encoding form cụ thể của instruction.
 
-> trong giải đáp câu hỏi này, có một ví dụ sẵn tiện giải thích luôn cơ chế `MAP_PRIVATE` khi ánh xạ vào file
+Để dễ hình dung, ta xét ví dụ:
 
-<details>
-	<summary><b>[Câu hỏi]</b> file nguồn trong trường hợp này là gì?</summary>
-<table>
-<tr>
-<td>
+```asm
+mov eax, 0x3c
+```
+
+Machine code:
+
+```text
+B8 3C 00 00 00
+```
+
+Có thể phân tích như sau:
+
+```
+B8 | 3C 00 00 00
+│          │
+│          └── Immediate 32-bit
+│
+└── Opcode encoding form B8+rd
+```
+
+Trong encoding form này, `B8` tương ứng với trường hợp thanh ghi đích là `EAX`, còn bốn byte tiếp theo biểu diễn immediate 32-bit theo little-endian.
+
+Khi thực thi, instruction đưa giá trị `0x3C` vào `EAX`. Vì thao tác ghi vào thanh ghi 32-bit tổng quát trong chế độ 64-bit sẽ xóa 32 bit cao của thanh ghi tương ứng, kết quả là:
+
+```
+EAX = 0x0000003C
+RAX = 0x000000000000003C
+```
+
+Qua ví dụ này, ta thấy machine code không lưu chuỗi văn bản `mov eax, 0x3c`. Nó lưu các byte mà CPU sẽ diễn giải theo quy tắc encoding của x86-64.
+
+**Vậy làm thế nào để xác định các byte trong một instruction?** Chúng ta cần nắm được vai trò của từng thành phần trong encoding.
+
+#### 8.1.1. Prefix
+
+Prefix là các byte hoặc trường encoding đứng trước opcode theo những quy tắc nhất định, có thể thay đổi cách diễn giải instruction hoặc mở rộng khả năng mã hóa.
+
+Đối với những nhóm prefix đã tìm hiểu, ta cần nhớ:
+
+<div align="center">
+
+| Nhóm | Vai trò khái quát |
+|:-|:-|
+| REX | Hỗ trợ mã hóa toán hạng 64-bit trong các instruction phù hợp và mở rộng mã thanh ghi |
+| Operand-size override (`66`) | Thay đổi kích thước toán hạng trong những encoding form phù hợp |
+| Address-size override (`67`) | Thay đổi kích thước địa chỉ được sử dụng để tính effective address |
+| Segment override | Chọn segment register cho toán hạng bộ nhớ; trong x86-64, FS và GS đặc biệt quan trọng |
+| LOCK (`F0`) | Yêu cầu ngữ nghĩa khóa đối với những instruction hỗ trợ prefix này |
+| REPNE/REP và các biến thể (`F2`, `F3`) | Có ý nghĩa phụ thuộc vào instruction; ngoài các thao tác chuỗi còn có những encoding sử dụng chúng theo cách riêng |
+
+</div>
+
+Với REX, ta có cấu trúc:
+
+```
+┌────────┬───┬───┬───┬───┐
+│  0100  │ W │ R │ X │ B │
+└────────┴───┴───┴───┴───┘
+```
+
+Trong đó:
+
+- `W`: thường chọn kích thước toán hạng 64-bit khi bằng `1`, tùy instruction.
+- `R`: mở rộng trường `reg` của ModR/M.
+- `X`: mở rộng trường `index` của SIB.
+- `B`: mở rộng trường `r/m` của ModR/M, trường `base` của SIB hoặc mã thanh ghi được mã hóa trong opcode, tùy encoding form.
+
+Ví dụ:
+
+```asm
+mov eax, ebx
+mov rax, rbx
+```
+
+Encoding tương ứng:
+
+```text
+89 D8
+48 89 D8
+```
+
+Byte `48` là REX prefix với `W=1`, làm thay đổi cách mã hóa toán hạng của instruction `MOV` này từ 32-bit sang 64-bit.
+
+Tuy nhiên, không phải nhóm prefix nào cũng có cấu trúc bit giống REX. Những prefix như `66`, `67`, `F0`, `F2`, `F3` thường được nhận diện bằng giá trị byte cụ thể và có quy tắc diễn giải riêng.
+
+#### 8.1.2. Opcode và Register Encoding
+
+Opcode hoặc opcode encoding form xác định operation và cách tổ chức các trường của instruction. Một số encoding form còn mã hóa trực tiếp mã thanh ghi vào các bit của opcode. Ví dụ:
+
+```asm
+mov eax, 1
+mov ecx, 1
+```
+
+Encoding:
+
+```text
+B8 01 00 00 00
+B9 01 00 00 00
+```
+
+Trong encoding form `B8+rd id`, ba bit thấp của opcode biểu diễn mã thanh ghi đích. Vì vậy, thay đổi thanh ghi đích có thể làm thay đổi opcode. Tuy nhiên, không phải mọi instruction đều mã hóa thanh ghi trực tiếp trong opcode. Một số encoding sử dụng ModR/M để biểu diễn thanh ghi hoặc toán hạng bộ nhớ. Ví dụ:
+
+```asm
+mov eax, ebx
+```
+
+Encoding:
+
+```text
+89 D8
+```
+
+Ở đây, `89` là opcode và `D8` là byte ModR/M. Do đó, khi phân tích instruction, ta không thể mặc định rằng mã thanh ghi luôn nằm trong opcode hoặc luôn nằm trong ModR/M. Phải xác định encoding form cụ thể trước khi diễn giải các trường.
+
+#### 8.1.3. ModR/M và SIB
+
+ModR/M là một byte có cấu trúc:
+
+```
+┌────────┬────────┬────────┐
+│  mod   │  reg   │  r/m   │
+│  2 bit │  3 bit │  3 bit │
+└────────┴────────┴────────┘
+```
+
+ModR/M giúp xác định cách biểu diễn toán hạng và có thể chứa mã thanh ghi hoặc thông tin chọn cách truy cập bộ nhớ. Ví dụ:
+
+```asm
+mov eax, ebx
+```
+
+Encoding:
+
+```text
+89 D8
+```
+
+Byte ModR/M:
+
+```
+D8 = 11011000
+
+11011000
+│  │  │
+│  │  └── r/m = 000
+│  └───── reg = 011
+└──────── mod = 11
+```
+
+Trong encoding form của `89 /r`, `mod=11` biểu thị toán hạng thanh ghi. Trường `reg` chọn `EBX`, còn `r/m` chọn `EAX`, tạo thành instruction `mov eax, ebx`. Đối với các toán hạng bộ nhớ, SIB có thể được sử dụng để mã hóa thông tin base, index và scale. Cấu trúc SIB:
+
+```
+┌────────┬────────┬────────┐
+│ scale  │ index  │  base  │
+│ 2 bit  │ 3 bit  │ 3 bit  │
+└────────┴────────┴────────┘
+```
+
+Với các encoding địa chỉ phù hợp, effective address có thể được tính theo công thức:
+
+<div align="center">
+
+$$\Large
+EA = Base + Index \times Scale + Displacement
+$$
+
+</div>
+
+**Trong đó:**
+
+- `Base`: giá trị của thanh ghi cơ sở nếu encoding sử dụng base.
+- `Index`: giá trị của thanh ghi chỉ số nếu encoding sử dụng index.
+- `Scale`: hệ số nhân `1`, `2`, `4` hoặc `8`.
+- `Displacement`: độ lệch được mã hóa trực tiếp trong instruction nếu có.
+
+Không phải mọi địa chỉ đều chứa đầy đủ bốn thành phần này. Một số encoding còn có các trường hợp đặc biệt, chẳng hạn không có base hoặc sử dụng địa chỉ tương đối với RIP. Vì vậy, khi decode ModR/M và SIB, chúng ta cần xét cả opcode, prefix và chế độ địa chỉ, thay vì chỉ nhìn riêng một byte rồi kết luận.
+
+#### 8.1.4. Immediate, Displacement và Instruction Length
+
+Immediate là giá trị được mã hóa trực tiếp trong instruction. Displacement là độ lệch được sử dụng khi tính địa chỉ hiệu dụng trong những encoding có trường này. Hai khái niệm này không đồng nghĩa với nhau. Ví dụ:
+
+```asm
+mov eax, 1
+mov eax, DWORD PTR [rbx + 8]
+```
+
+Encoding:
+
+```text
+B8 01 00 00 00
+8B 43 08
+```
+
+Ở instruction đầu tiên, `01 00 00 00` là immediate 32-bit có giá trị `1`. Ở instruction thứ hai, `08` là displacement 8-bit có giá trị `8`, được sử dụng để tính địa chỉ truy cập bộ nhớ từ `RBX`. Ngoài ra, cần phân biệt kích thước của trường được mã hóa với kích thước toán hạng mà instruction thao tác. Một immediate 8-bit có thể được sign-extend khi instruction yêu cầu, nhưng không phải mọi immediate đều được mở rộng theo cùng một cách.
+
+Cuối cùng, x86-64 sử dụng instruction encoding có độ dài biến thiên. Mỗi instruction có thể chiếm số byte khác nhau, tối đa 15 byte theo quy tắc mã hóa x86-64. Độ dài instruction phụ thuộc vào encoding form, prefix và các trường được sử dụng. Vì vậy, không thể chỉ dựa vào tên mnemonic để xác định số byte của instruction.
+
+### 8.2. Quy trình Decode một Instruction
+
+Sau khi hiểu các thành phần của instruction encoding, chúng ta có thể xây dựng một quy trình giải mã tổng quát. Giả sử gặp dãy byte:
+
+```text
+48 8B 43 08
+```
+
+Ta cần xác định instruction tương ứng bằng cách áp dụng các quy tắc encoding của x86-64.
+
+#### Bước 1: Xác định chế độ giải mã và các prefix
+
+Byte đầu tiên:
+
+```text
+48
+```
+
+Đây là REX prefix:
+
+```
+48 = 0100 1000
+     0100 W R X B
+          1 0 0 0
+```
+
+Suy ra `REX.W=1`, còn `R`, `X`, `B` bằng `0`. Trong encoding này, `REX.W=1` chọn toán hạng 64-bit cho instruction `MOV` đang xét.
+
+#### Bước 2: Xác định opcode
+
+Byte tiếp theo:
+
+```text
+8B
+```
+
+Opcode `8B` thuộc encoding form:
+
+```text
+MOV r16/32/64, r/m16/32/64
+```
+
+Kích thước toán hạng cụ thể phụ thuộc vào prefix và các quy tắc áp dụng. Trong trường hợp này, `REX.W=1` chọn kích thước 64-bit.
+
+#### Bước 3: Decode ModR/M
+
+Byte tiếp theo:
+
+```text
+43 = 01000011
+```
+
+Chia thành các trường:
+
+```
+01 | 000 | 011
+│     │     │
+│     │     └── r/m = 011
+│     └──────── reg = 000
+└────────────── mod = 01
+```
+
+Với encoding form `8B /r`:
+
+- `reg=000` chọn thanh ghi đích `RAX` khi `REX.W=1`.
+- `mod=01` biểu thị toán hạng bộ nhớ có displacement 8-bit.
+- `r/m=011` chọn base `RBX` trong trường hợp này.
+
+Vì `r/m` không chỉ định cách mã hóa yêu cầu SIB, instruction không cần SIB byte.
+
+#### Bước 4: Decode Displacement
+
+Byte cuối cùng:
+
+```text
+08
+```
+
+Do `mod=01`, byte này là displacement 8-bit có dấu, với giá trị `+8`.
+
+Địa chỉ hiệu dụng được tính:
+
+$$
+EA = RBX + 8
+$$
+
+Instruction đọc 8 byte từ địa chỉ hiệu dụng đó và đưa dữ liệu vào `RAX`.
+
+#### Kết quả
+
+Toàn bộ encoding:
+
+```text
+48 8B 43 08
+```
+
+Được giải mã thành:
+
+```asm
+mov rax, QWORD PTR [rbx + 8]
+```
+
+Có thể tóm tắt quy trình decode tổng quát như sau:
+
+```
+Machine-code bytes
+        │
+        ▼
+Xác định chế độ giải mã
+và các prefix
+        │
+        ▼
+Xác định opcode / encoding form
+        │
+        ▼
+Giải mã ModR/M nếu có
+        │
+        ▼
+Giải mã SIB nếu được yêu cầu
+        │
+        ▼
+Xác định displacement và immediate
+theo encoding form
+        │
+        ▼
+Xác định ranh giới instruction
+và assembly representation
+```
+
+Đây là mô hình khái quát để học và phân tích instruction encoding. Trên thực tế, thứ tự và sự hiện diện của các trường phụ thuộc vào encoding form cụ thể. Với các định dạng như VEX và EVEX, việc giải mã còn cần diễn giải những trường riêng của định dạng đó.
+
+**Điểm quan trọng:** không thể xác định chắc chắn ý nghĩa của một byte chỉ bằng giá trị của nó. Cần xét byte đó trong ngữ cảnh của toàn bộ instruction encoding và ISA.
+
+### 8.3. Những gì cần nhớ
+
+Sau khi hoàn thành chương này, có một số kiến thức quan trọng cần ghi nhớ.
+
+#### 8.3.1. Machine Code và Assembly
+
+- Assembly là cách biểu diễn instruction bằng mnemonic và toán hạng để con người đọc được.
+- Machine code là các byte mã hóa instruction theo ISA cụ thể.
+- Disassembler phân tích machine code và tạo ra assembly representation.
+- Một instruction có thể có nhiều encoding hợp lệ, tùy theo toán hạng và encoding form.
+- Không phải mọi byte nằm trong vùng mã đều chắc chắn là instruction; cần phân biệt code, data, padding và các vùng khác.
+
+#### 8.3.2. Instruction Encoding
+
+- Opcode hoặc opcode encoding form xác định operation và cấu trúc mã hóa của instruction.
+- Prefix có thể thay đổi cách diễn giải instruction hoặc mở rộng khả năng mã hóa.
+- REX có cấu trúc bit `0100WRXB`, nhưng không phải mọi nhóm prefix đều dùng cấu trúc bit giống REX.
+- Register encoding có thể nằm trong opcode, ModR/M hoặc những trường khác tùy encoding form.
+- ModR/M gồm ba trường `mod`, `reg` và `r/m`.
+- SIB gồm ba trường `scale`, `index` và `base`.
+- Immediate là giá trị được mã hóa trực tiếp trong instruction.
+- Displacement là độ lệch được sử dụng để tính địa chỉ hiệu dụng.
+- Instruction length phụ thuộc vào encoding cụ thể và không vượt quá 15 byte trong x86-64.
+
+#### 8.3.3. Object Code và ELF
+
+Một chương trình thực thi không chỉ gồm machine code. Trên Linux, ELF còn có các cấu trúc phục vụ việc liên kết, nạp và thực thi chương trình.
+
+Cần phân biệt:
+
+| Thành phần | Vai trò |
+|:-|:-|
+| `.text` | Section thường chứa mã máy |
+| `.data` | Section thường chứa dữ liệu đã khởi tạo có thể ghi |
+| `.rodata` | Section thường chứa dữ liệu chỉ đọc |
+| Symbol Table | Lưu thông tin về symbol như hàm, biến và các định danh liên quan |
+| Relocation | Mô tả những vị trí cần được điều chỉnh theo quy tắc liên kết |
+| Section Headers | Mô tả các section trong ELF |
+| Program Headers | Mô tả các segment phục vụ việc nạp chương trình |
+| Entry Point | Địa chỉ bắt đầu thực thi được khai báo trong ELF |
+
+Cần nhớ rằng section và segment không phải cùng một khái niệm. Linker làm việc với object file để giải quyết symbol, xử lý relocation và tạo đầu ra liên kết. Khi thực thi, hệ điều hành chủ yếu dựa vào program headers để xác định các segment cần nạp.
+
+#### 8.3.4. Từ Source Code đến CPU Execution
+
+Quy trình tổng quát có thể được biểu diễn như sau:
+
+```
+C source
+   │
+   ▼
+Preprocessing
+   │
+   ▼
+Compilation
+   │
+   ▼
+Assembly
+   │
+   ▼
+Object File (.o)
+   │
+   ▼
+Linking
+   │
+   ▼
+ELF Executable
+   │
+   ▼
+OS Loader
+   │
+   ▼
+Virtual Address Space
+   │
+   ▼
+CPU Fetch → Decode → Execute
+```
+
+Đây là mô hình khái quát. Với chương trình C, compilation có thể tạo assembly trước khi assembler chuyển nó thành object file; với assembly viết trực tiếp, ta có thể bắt đầu từ assembler. Các thư viện động và relocation động còn có thể cần xử lý trong quá trình nạp hoặc liên kết động.
+
+Một điểm đặc biệt quan trọng là CPU thực thi instruction bytes trong bộ nhớ, không thực thi trực tiếp văn bản assembly hay đọc nguyên file ELF như một chuỗi instruction liên tục.
+
+#### 8.3.5. Lập trình Byte Program
+
+Lập trình byte program là việc tự xây dựng hoặc tích hợp machine-code bytes dựa trên hiểu biết về instruction encoding, sau đó tổ chức chúng theo cách phù hợp để kiểm tra hoặc thực thi.
+
+Có thể dùng những công cụ sau:
+
+| Công cụ | Mục đích |
+|:-|:-|
+| `NASM` | Assemble assembly hoặc khai báo byte trực tiếp bằng `db` |
+| `GCC` | Biên dịch chương trình C |
+| `ld` | Link object file thành executable |
+| `objdump` | Disassemble và kiểm tra mã máy |
+| `readelf` | Kiểm tra cấu trúc ELF |
+| `xxd` | Quan sát byte hoặc chuyển đổi hex dump thành dữ liệu nhị phân |
+| `GDB` | Debug chương trình và quan sát instruction khi thực thi |
+
+Nếu khai báo machine code trong mảng `uint8_t` của C, các byte ban đầu chỉ là dữ liệu. Muốn CPU thực thi chúng như instruction, chương trình phải chuyển luồng thực thi tới vùng nhớ chứa các byte đó, đồng thời đáp ứng các yêu cầu về quyền bộ nhớ, ABI và môi trường thực thi.
+
+Nếu dùng NASM với directive `db`, assembler sẽ ghi các byte được chỉ định vào output. Sau đó có thể link object file thành ELF executable, miễn là chương trình có cấu trúc và các thành phần cần thiết để thực thi.
+
+Cần phân biệt rõ:
+
+- **Machine-code bytes:** các byte biểu diễn instruction.
+- **Raw binary:** file chứa dữ liệu nhị phân nhưng không nhất thiết có cấu trúc executable.
+- **Object file:** file chứa mã máy cùng metadata phục vụ liên kết.
+- **ELF executable:** file có cấu trúc phục vụ việc nạp và thực thi chương trình.
+
+Cuối cùng, cần kiểm chứng chương trình ở nhiều mức khác nhau: encoding có đúng không, ELF có cấu trúc phù hợp không và hành vi thực thi có đúng như dự kiến không.
 
 ---
 
-File nguồn là file trên hệ thống tệp mà `mmap()` sử dụng làm nguồn dữ liệu khi tạo một vùng nhớ ánh xạ (file-backed mapping). **Ví dụ**, giả sử ta có file `/home/crokson/data.txt` với nội dùng bên trong nó là :
-
-```
-Hello, linux
-```
-
-Ánh xạ file bằng `MAP_PRIVATE`, ta xét đoạn C sau :
-
-```c
-int fd = open("/home/crokson/data.txt", O_RDWR); //đây là đường dẫn đến file nguồn
-
-void *mem = mmap(
-    NULL,
-    4096,
-    PROT_READ | PROT_WRITE,
-    MAP_PRIVATE, // yêu cầu các thay đổi qua mapping mang tính riêng tư.
-    fd, // là file descriptor đại diện cho file đang mở.
-    0 // offset = 0 là yêu cầu bắt đầu ánh xạ từ đầu file.
-);
-```
-
-Sau khi lệnh `mmap()` trên chạy xong và gắn vùng ánh xạ trong địa chỉ `*mem` thì giả sử ta ghi `World` vào vùng nhớ tương ứng với nội dung `Hello` như sau `memcpy(mem, "World", 5);` thì dữ liệu đọc qua mapping có thể thành `World, Linux!` nhưng nội dung ở file trên disk vẫn là `Hello, Linux!` đó là tác dụng chính của `MAP_PRIVATE`. Các thay đổi qua `MAP_PRIVATE` không được ghi ngược vào file nguồn.
-
-<sub>--đã hết phần giải thích--</sub>
-
----
-
-</td>
-</tr>
-</table>
-</details>
-
-#### 2.5.1.1 Copy-on-Write (COW)
-
-Copy-on-Write (COW) là cơ chế sao chép khi ghi, nhiều bên có thể tạm thời dùng chung dữ liệu, và hệ điều hành chỉ tạo bản sao riêng khi có bên cần thay đổi dữ liệu đó. Mục đích chính là tránh sao chép dữ liệu không cần thiết, tiết kiệm bộ nhớ và giảm chi phí sao chép. Để hiểu COW trong `mmap()`, ta cần phân biệt ba thứ:
-- **Virtual Address (VA):** địa chỉ ảo mà chương trình sử dụng.
-- **Physical Page:** trang bộ nhớ vật lý chứa dữ liệu.
-- **Page Table:** cấu trúc giúp CPU dịch địa chỉ ảo sang địa chỉ vật lý, đồng thời áp dụng các quyền truy cập.
-
-> hai khái niệm physical page và page table được nêu chi tiết và rõ ràng tại chương [7.Page Table,Physical Memory và TLB](#7-page-table-physical-memory-và-tlb)
-
-Cách cow hoạt động. Giả sử hai mapping riêng tư cùng ánh xạ một file có nội dung:
-
-```
-File nguồn:
-┌──────────────────────┐
-│ "Hello, Linux!"      │
-└──────────────────────┘
-```
-
-Khi kernel có thể cho các mapping dùng chung trang dữ liệu ban đầu, trạng thái khái quát có thể như sau:
-
-```
-        Mapping A                 Mapping B
-     (địa chỉ ảo A)             (địa chỉ ảo B)
-            │                         │
-            └──────────┬──────────────┘
-                       │
-                       ▼
-              Trang vật lý P
-              ┌─────────────────┐
-              │ "Hello, Linux!" │
-              └─────────────────┘
-```
-
-Hai mapping có địa chỉ ảo riêng, nhưng có thể cùng tham chiếu đến một trang vật lý chứa dữ liệu ban đầu. Nếu cả hai mapping chỉ đọc dữ liệu, kernel không nhất thiết phải tạo thêm bản sao. Khi mapping A ghi dữ liệu, giả sử chương trình A thực hiện ghi dữ liệu bằng lệnh `memcpy(mem, "World", 5);`. Nếu đây là `MAP_PRIVATE` và trang đang được chia sẻ theo cơ chế COW, thao tác ghi có thể kích hoạt quá trình sau:
-- 1.CPU cố gắng ghi vào trang đang được bảo vệ để phục vụ COW.
-- 2.CPU phát sinh page fault.
-- 3.Kernel xác định rằng đây là trường hợp ghi hợp lệ cần thực hiện COW.
-- 4.Kernel cấp một trang vật lý riêng và sao chép nội dung trang cũ sang trang mới.
-- 5.Kernel cập nhật ánh xạ của A để trỏ đến trang riêng mới, với quyền truy cập phù hợp.
-- 6.CPU tiếp tục thực hiện thao tác ghi.
-Kết quả khái quát:
-
-```
-       Mapping A                 Mapping B
-           │                         │
-           ▼                         │
-    Trang vật lý P'                  │
-    ┌─────────────────┐              │
-    │ "World, Linux!" │              │
-    └─────────────────┘              │
-                                     ▼
-                            Trang vật lý P
-                            ┌─────────────────┐
-                            │ "Hello, Linux!" │
-                            └─────────────────┘
-```
-
-Sau đó:
-- A đọc được nội dung đã sửa.
-- B vẫn đọc được nội dung ban đầu.
-- Thay đổi riêng tư của A không được ghi ngược vào file nguồn thông qua mapping.
-Đây chính là ý nghĩa của Copy-on-Write: chỉ tạo bản sao khi cần ghi, thay vì sao chép ngay từ đầu.
-
-**Lưu ý:** Đây là mô hình minh họa. COW chỉ diễn ra khi các điều kiện thực tế của mapping và trạng thái trang yêu cầu nó; không phải mọi lần ghi vào `MAP_PRIVATE` đều bắt buộc tạo một bản sao mới.
-
-- **COW liên quan gì đến `MAP_PRIVATE`?:** vì cow là đảm nhiệm thực hiện sự riêng tư của `MAP_PRIVATE`, để hiểu việc này, ta xét lời gọi :
-
-  ```
-  int fd = open("/home/crokson/data.txt", O_RDWR); //đây là đường dẫn đến file nguồn
-
-  void *mem = mmap(
-    NULL,
-    4096,
-    PROT_READ | PROT_WRITE, // Chế độ đọc và ghi
-    MAP_PRIVATE, // Quy định các thay đổi qua mapping có tính chất riêng tư
-    fd,
-    0
-  );
-  ```
-
-  Ở đây nó sẽ tạo một vùng ánh xạ có địa chỉ do kernel cung cấp và kích thước 4KiB, ánh xạ tới file `data.txt`. Bây giờ: 
-	- khi chúng ta chưa thực hiện một lệnh ghi nội dung gì vào chẳng hạn như `memcpy(mem, "World", 5);` nhưng cũng chính lúc này kernel ko muốn sao chép toàn bộ file ngay từ đầu vì muốn tối ưu bộ nhớ, kernel giải quyết bằng cow :
-    - Ban đầu cho mapping vùng ánh xạ với file (hoặc các mapping khác) dùng chung một trang vật lý và đánh dấu trang vật lý đó là read-only (hoặc protected) dù ta đã yêu cầu `PROT_WRITE`
-	- Khi chúng ta dùng lệnh `memcpy(mem, "World", 5);` nghĩa là thực sự ghi và thay thế `Hello` ở vùng chỉ đọc tại trang vật lý thành `World`, thì CPU sẽ phát sinh lỗi page fault, kernel nhận mã lỗi page fault này và kernel mới tạo bản sao riêng và khi đó vùng ánh xạ sẽ được cập nhật page table của process trỏ sang trang mới lúc này chúng ta mới được ghi
-- **Điều gì nếu ko có COW cho `MAP_PRIVATE`:** Nếu ko có cow cho `MAP_PRIVATE` thì kernel khi chạy xong lệnh `mmap()` nó sẽ sao chép luôn toàn bộ nội dung file ngay lập tức, điều này rất tốn thời gian và bộ nhớ dù chúng ta có thể sẽ ko bao giờ ghi. Với cow, nó chỉ thực hiện sao chép khi chúng ta ghi, còn nếu chạy `mmap()` mà vẫn chưa ghi thì nó cho vùng ánh xạ dùng chung một trang vật lý file (hoặc các mapping khác), nghĩa là thực sự sao chép khi chúng ta thực sự sử dụng nó
-- **Nếu `prot` cho phép ghi, tại sao CPU không ghi trực tiếp lên trang đang được chia sẻ?:** Vì quyền ghi mà chương trình yêu cầu không đồng nghĩa với việc kernel phải cho phép ghi trực tiếp lên trang vật lý dùng chung. Trong trường hợp cần COW, kernel có thể thiết lập các quyền của trang trong Page Table để thao tác ghi ban đầu gây page fault. Sau khi xử lý COW, thao tác ghi được tiếp tục trên trang riêng của tiến trình.
-
-> [!IMPORTANT]
-> **Lưu ý quan trọng :** `MAP_PRIVATE` không bắt buộc luôn dùng COW (ví dụ nếu ta `mmap` với `PROT_READ` only thì không cần).
->
-> Nhưng trong trường hợp phổ biến nhất (`PROT_READ | PROT_WRITE + MAP_PRIVATE`), COW chính là cách kernel thực hiện yêu cầu riêng tư của `MAP_PRIVATE`.
-
-#### 2.5.2. MAP_SHARED — ánh xạ chia sẻ
-
-`MAP_SHARED` là một flag của `mmap()` cho phép các thay đổi thông qua mapping được chia sẻ với những mapping khác của cùng đối tượng được ánh xạ. Với file-backed mapping, các thay đổi đó còn có thể được ghi trở lại file nguồn. Để hiểu được cái này, ta cần phải hiểu và phân biệt thêm vùng nhớ ảo, trang nhớ vật lý và file nguồn.
-
-> File nguồn đã được giải thích tại phần câu hỏi của chương `MAP_PRIVATE`, vùng nhớ ảo và trang nhớ vật lý được nêu rõ tại chương [1.1.1. Virtual Address và physical address](#111-virtual-address-và-physical-address)
-
-Cách `MAP_SHARED` hoạt động. Giả sử ta có, file `/tmp/data.txt` có nội dung `hello`, tiến trình A ánh xạ file bằng cách dùng `MAP_SHARED`:
-
-```
-void *mem = mmap(
-    NULL,
-    4096,
-    PROT_READ | PROT_WRITE,
-    MAP_SHARED,
-    fd,
-    0
-);
-```
-
-Sau khi `mmap()` thành công, `mem` trỏ đến vùng địa chỉ ảo tương ứng với mapping của file. Nếu tiến trình A thực hiện `strcpy(mem, "World");` thì nội dung trong mapping sẽ trở thành `World`. Với `MAP_SHARED`, thay đổi này có thể được quan sát qua một mapping tương thích khác của cùng file. Nội dung file cũng có thể được cập nhật thông qua cơ chế ghi lại dữ liệu của hệ điều hành.
-
-> [!NOTE]
-> **Lưu ý:** không nên giả định dữ liệu trên thiết bị lưu trữ được cập nhật ngay lập tức sau `strcpy()`. Kernel có thể giữ các trang đã sửa đổi trong page cache trước khi ghi chúng xuống thiết bị.
-
-### 2.6. `fd` và `offset`
-### 2.7. Giá trị trả về và xử lý lỗi
-### 2.8. Khai báo và Prototype của `munmap()`
-### 2.9. Các tham số `addr` và `length` của `munmap()`
-### 2.10. Giá trị trả về và xử lý lỗi của `munmap()`
+**Tổng kết lại:** Program Encoding giúp chúng ta hiểu mối liên hệ giữa assembly representation, machine-code bytes và cách CPU diễn giải instruction theo ISA. Khi nắm được prefix, opcode, ModR/M, SIB, displacement, immediate và instruction length, chúng ta có thể chủ động phân tích encoding thay vì chỉ phụ thuộc vào kết quả disassembly. Khi kết hợp kiến thức này với ELF, symbol, relocation và linker, chúng ta có thể hiểu sâu hơn quá trình biến các byte mã máy thành một chương trình có thể thực thi trên hệ thống.
