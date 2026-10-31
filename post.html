@@ -140,11 +140,11 @@ button:disabled{opacity:.55;cursor:not-allowed}
   </article>
 
   <div class="views-bar" id="views-bar" style="display:none">
-    <strong><span id="global-view-count">Chưa cấu hình</span> lượt xem</strong>
-    <span style="opacity:.7">(tổng lượt xem của bài)</span>
+    👁 <strong><span id="global-view-count">…</span></strong> lượt xem
+    <span style="opacity:.7">(toàn cầu · GoatCounter)</span>
     <span aria-hidden="true">·</span>
-    <span id="view-count">0</span> lượt đọc trên thiết bị này
-    <span style="opacity:.7">(đọc ≥1 phút · tối đa 1 lượt/giờ)</span>
+    <span id="view-count">0</span> trên thiết bị này
+    <span style="opacity:.7">(≥1 phút · tối đa 1 / giờ · F5 không tính)</span>
   </div>
 
   <div class="share-tools" id="share-tools" style="display:none">
@@ -187,14 +187,15 @@ button:disabled{opacity:.55;cursor:not-allowed}
 (function () {
   'use strict';
 
-  const CONFIG = {
+    const CONFIG = {
     owner: 'tranquanghao708',
     repo: 'tranquanghao708.github.io',
     branch: 'main',
     fetchTimeoutMs: 20000,
-    viewDwellMs: 60 * 1000,
-    viewCooldownMs: 60 * 60 * 1000,
-    goatCounterEndpoint: ''
+    viewDwellMs: 60 * 1000,        // phải ở lại ≥ 1 phút
+    viewCooldownMs: 60 * 60 * 1000, // tối đa 1 lần / giờ trên thiết bị
+    // ← thay YOURCODE bằng code site của bạn
+    goatCounterEndpoint: 'https://tranquanghao708.goatcounter.com/count'
   };
 
   const GISCUS = {
@@ -614,56 +615,114 @@ button:disabled{opacity:.55;cursor:not-allowed}
   }
 
   function initViews() {
-    const viewKey = 'local_reads_' + POST_ID;
-    const lastKey = 'local_readmeta_' + POST_ID;
-    const counter = document.getElementById('view-count');
+    const viewKey = 'gc_sent_' + POST_ID;       // đã gửi count lên GoatCounter?
+    const lastKey = 'gc_last_' + POST_ID;       // timestamp lần gửi gần nhất
+    const localKey = 'local_reads_' + POST_ID;  // số lần đọc trên máy này
+    const counterLocal = document.getElementById('view-count');
+    const counterGlobal = document.getElementById('global-view-count');
+    const endpoint = String(CONFIG.goatCounterEndpoint || '').trim();
+    const viewPath = '/posts/' + (file || 'external');
 
-    function readCount() {
+    function localCount() {
       try {
-        const value = Number.parseInt(localStorage.getItem(viewKey) || '0', 10);
-        return Number.isFinite(value) && value >= 0 ? value : 0;
-      } catch (e) {
-        return 0;
-      }
+        const n = parseInt(localStorage.getItem(localKey) || '0', 10);
+        return Number.isFinite(n) && n >= 0 ? n : 0;
+      } catch (e) { return 0; }
     }
-    function displayCount() {
-      if (counter) counter.textContent = String(readCount());
+    function showLocal() {
+      if (counterLocal) counterLocal.textContent = String(localCount());
     }
-    displayCount();
+    showLocal();
 
+    /* ---- Hiển thị số toàn cầu (không làm tăng view) ---- */
+    function loadGlobalDisplay() {
+      if (!counterGlobal) return;
+      if (!endpoint || !/^https:\/\/[a-z0-9-]+\.goatcounter\.com\/count$/i.test(endpoint)) {
+        counterGlobal.textContent = '—';
+        counterGlobal.title = 'Điền CONFIG.goatCounterEndpoint = https://YOURCODE.goatcounter.com/count';
+        return;
+      }
+      // Dùng API visit_count của GoatCounter (chỉ đọc, không count)
+      window.goatcounter = Object.assign({}, window.goatcounter || {}, {
+        path: viewPath,
+        no_onload: true
+      });
+      const s = document.createElement('script');
+      s.src = 'https://gc.zgo.at/count.js';
+      s.async = true;
+      s.dataset.goatcounter = endpoint;
+      s.dataset.goatcounterSettings = JSON.stringify({ no_onload: true });
+      s.onload = function () {
+        try {
+          if (window.goatcounter && typeof window.goatcounter.visit_count === 'function') {
+            counterGlobal.textContent = '';
+            window.goatcounter.visit_count({
+              append: '#global-view-count',
+              path: viewPath,
+              no_branding: true
+            });
+          } else {
+            counterGlobal.textContent = '—';
+          }
+        } catch (e) {
+          counterGlobal.textContent = '—';
+        }
+      };
+      s.onerror = function () { counterGlobal.textContent = '—'; };
+      document.head.appendChild(s);
+    }
+    loadGlobalDisplay();
+
+    /* ---- Anti F5 / anti spam: chỉ count sau dwell + cooldown ---- */
     let timer = null;
-    let counted = false;
+    let done = false;
     const startedAt = Date.now();
 
     function stop() {
       if (timer) clearTimeout(timer);
       timer = null;
     }
-    function countIfEligible() {
-      if (counted || document.visibilityState !== 'visible') return;
-      if (Date.now() - startedAt < CONFIG.viewDwellMs) return;
-      try {
-        const last = Number.parseInt(localStorage.getItem(lastKey) || '0', 10);
-        const now = Date.now();
-        if (Number.isFinite(last) && last > 0 && now - last < CONFIG.viewCooldownMs) return;
-        localStorage.setItem(viewKey, String(readCount() + 1));
-        localStorage.setItem(lastKey, String(now));
-        counted = true;
-        displayCount();
-      } catch (error) {
-        console.warn('[reads] localStorage unavailable:', error);
+
+    function tryCount() {
+      if (done || document.visibilityState !== 'visible') return;
+      if (Date.now() - startedAt < CONFIG.viewDwellMs) return; // F5 / thoát sớm → không tính
+
+      let last = 0;
+      try { last = parseInt(localStorage.getItem(lastKey) || '0', 10) || 0; } catch (e) {}
+      const now = Date.now();
+      if (last && now - last < CONFIG.viewCooldownMs) return; // trong 1 giờ đã count rồi
+
+      // Gửi 1 lần lên GoatCounter (server-side, chống bot cơ bản)
+      if (endpoint && /^https:\/\/[a-z0-9-]+\.goatcounter\.com\/count$/i.test(endpoint) &&
+          window.goatcounter && typeof window.goatcounter.count === 'function') {
+        try {
+          window.goatcounter.count({ path: viewPath, title: document.title });
+        } catch (e) {
+          console.warn('[views] goatcounter.count', e);
+        }
       }
+
+      try {
+        localStorage.setItem(lastKey, String(now));
+        localStorage.setItem(viewKey, '1');
+        localStorage.setItem(localKey, String(localCount() + 1));
+      } catch (e) {}
+      done = true;
+      showLocal();
+      // Làm mới số global sau vài giây (GoatCounter cập nhật không tức thì)
+      setTimeout(loadGlobalDisplay, 2500);
     }
+
     function schedule() {
       stop();
-      if (document.visibilityState === 'visible' && !counted) {
-        const elapsed = Date.now() - startedAt;
-        timer = setTimeout(countIfEligible, Math.max(0, CONFIG.viewDwellMs - elapsed));
+      if (document.visibilityState === 'visible' && !done) {
+        const left = CONFIG.viewDwellMs - (Date.now() - startedAt);
+        timer = setTimeout(tryCount, Math.max(0, left));
       }
     }
 
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'hidden') stop();
+      if (document.visibilityState === 'hidden') stop(); // rời tab → hủy, F5 cũng reset startedAt
       else schedule();
     });
     window.addEventListener('pagehide', stop, { once: true });
