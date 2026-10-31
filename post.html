@@ -615,166 +615,231 @@ button:disabled{opacity:.55;cursor:not-allowed}
   }
 
   function initViews() {
-    const viewKey = 'gc_sent_' + POST_ID;       // đã gửi count lên GoatCounter?
-    const lastKey = 'gc_last_' + POST_ID;       // timestamp lần gửi gần nhất
-    const localKey = 'local_reads_' + POST_ID;  // số lần đọc trên máy này
+    const endpoint = String(CONFIG.goatCounterEndpoint || '').trim();
+    const viewPath = '/posts/' + (file || 'external');
+
     const counterLocal = document.getElementById('view-count');
     const counterGlobal = document.getElementById('global-view-count');
-    const endpoint = String(CONFIG.goatCounterEndpoint || '').trim();
-    const viewPath = '/posts/' + (file || 'external');
+
+    const localKey = 'local_reads_' + POST_ID;
+    const lastKey = 'gc_last_' + POST_ID;
+
+    let goatCounter = null;
+    let scriptPromise = null;
+    let dwellTimer = null;
+    let remainingMs = CONFIG.viewDwellMs;
+    let visibleSince = null;
+    let done = false;
+    let counting = false;
+
+    function storageGet(key, fallback) {
+      try {
+        const value = localStorage.getItem(key);
+        return value === null ? fallback : value;
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    function storageSet(key, value) {
+      try {
+        localStorage.setItem(key, String(value));
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
 
     function localCount() {
-      try {
-        const n = parseInt(localStorage.getItem(localKey) || '0', 10);
-        return Number.isFinite(n) && n >= 0 ? n : 0;
-      } catch (e) { return 0; }
+      const value = parseInt(storageGet(localKey, '0'), 10);
+      return Number.isFinite(value) && value >= 0 ? value : 0;
     }
-    function showLocal() {
+
+    function showLocalCount() {
       if (counterLocal) counterLocal.textContent = String(localCount());
     }
-    showLocal();
 
-    /* ---- Hiển thị số toàn cầu (không làm tăng view) ---- */
-    function loadGlobalDisplay() {
-      if (!counterGlobal) return;
-      if (!endpoint || !/^https:\/\/[a-z0-9-]+\.goatcounter\.com\/count$/i.test(endpoint)) {
+    function inCooldown() {
+      const last = parseInt(storageGet(lastKey, '0'), 10) || 0;
+      return last > 0 && Date.now() - last < CONFIG.viewCooldownMs;
+    }
+
+    showLocalCount();
+
+    if (!/^https:\/\/[a-z0-9-]+\.goatcounter\.com\/count$/i.test(endpoint)) {
+      if (counterGlobal) {
         counterGlobal.textContent = '—';
-        counterGlobal.title = 'Điền CONFIG.goatCounterEndpoint = https://YOURCODE.goatcounter.com/count';
-        return;
+        counterGlobal.title = 'GoatCounter endpoint không hợp lệ.';
       }
-      // Dùng API visit_count của GoatCounter (chỉ đọc, không count)
-      window.goatcounter = Object.assign({}, window.goatcounter || {}, {
-        path: viewPath,
-        no_onload: true
-      });
-      const s = document.createElement('script');
-      s.src = 'https://gc.zgo.at/count.js';
-      s.async = true;
-      s.dataset.goatcounter = endpoint;
-      s.dataset.goatcounterSettings = JSON.stringify({ no_onload: true });
-      s.onload = function () {
-        try {
-          if (window.goatcounter && typeof window.goatcounter.visit_count === 'function') {
-            counterGlobal.textContent = '';
-            window.goatcounter.visit_count({
-              append: '#global-view-count',
-              path: viewPath,
-              no_branding: true
-            });
+      return;
+    }
+
+    // Tải count.js đúng một lần và tắt pageview tự động.
+    function loadGoatCounter() {
+      if (scriptPromise) return scriptPromise;
+
+      scriptPromise = new Promise(function (resolve) {
+        window.goatcounter = Object.assign({}, window.goatcounter || {}, {
+          path: viewPath,
+          no_onload: true
+        });
+
+        const script = document.createElement('script');
+        script.src = 'https://gc.zgo.at/count.js';
+        script.async = true;
+        script.dataset.goatcounter = endpoint;
+        script.dataset.goatcounterSettings = JSON.stringify({ no_onload: true });
+
+        script.onload = function () {
+          const gc = window.goatcounter;
+          if (gc && typeof gc.count === 'function') {
+            resolve(gc);
           } else {
-            counterGlobal.textContent = '—';
+            console.error('[views] GoatCounter count() không khả dụng.');
+            resolve(null);
           }
-        } catch (e) {
-          counterGlobal.textContent = '—';
-        }
-      };
-      s.onerror = function () { counterGlobal.textContent = '—'; };
-      document.head.appendChild(s);
-    }
-    loadGlobalDisplay();
+        };
 
-    /* ---- Anti F5 / anti spam: chỉ count sau dwell + cooldown ---- */
-    let timer = null;
-    let done = false;
-    const startedAt = Date.now();
+        script.onerror = function () {
+          console.error('[views] Không tải được https://gc.zgo.at/count.js');
+          resolve(null);
+        };
 
-    function stop() {
-      if (timer) clearTimeout(timer);
-      timer = null;
+        document.head.appendChild(script);
+      });
+
+      return scriptPromise;
     }
 
-    function tryCount() {
-      if (done || document.visibilityState !== 'visible') return;
-      if (Date.now() - startedAt < CONFIG.viewDwellMs) return; // F5 / thoát sớm → không tính
+    // Chỉ đọc số liệu; không gửi pageview.
+    function loadGlobalDisplay(gc) {
+      if (!counterGlobal) return;
 
-      let last = 0;
-      try { last = parseInt(localStorage.getItem(lastKey) || '0', 10) || 0; } catch (e) {}
-      const now = Date.now();
-      if (last && now - last < CONFIG.viewCooldownMs) return; // trong 1 giờ đã count rồi
-
-      // Gửi 1 lần lên GoatCounter (server-side, chống bot cơ bản)
-      if (endpoint && /^https:\/\/[a-z0-9-]+\.goatcounter\.com\/count$/i.test(endpoint) &&
-          window.goatcounter && typeof window.goatcounter.count === 'function') {
-        try {
-          window.goatcounter.count({ path: viewPath, title: document.title });
-        } catch (e) {
-          console.warn('[views] goatcounter.count', e);
-        }
-      }
-
-      try {
-        localStorage.setItem(lastKey, String(now));
-        localStorage.setItem(viewKey, '1');
-        localStorage.setItem(localKey, String(localCount() + 1));
-      } catch (e) {}
-      done = true;
-      showLocal();
-      // Làm mới số global sau vài giây (GoatCounter cập nhật không tức thì)
-      setTimeout(loadGlobalDisplay, 2500);
-    }
-
-    function schedule() {
-      stop();
-      if (document.visibilityState === 'visible' && !done) {
-        const left = CONFIG.viewDwellMs - (Date.now() - startedAt);
-        timer = setTimeout(tryCount, Math.max(0, left));
-      }
-    }
-
-    document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'hidden') stop(); // rời tab → hủy, F5 cũng reset startedAt
-      else schedule();
-    });
-    window.addEventListener('pagehide', stop, { once: true });
-    schedule();
-  }
-
-  function initGlobalViews() {
-    const output = document.getElementById('global-view-count');
-    const endpoint = String(CONFIG.goatCounterEndpoint || '').trim();
-    if (!output) return;
-
-    if (!endpoint) {
-      output.textContent = 'Chưa cấu hình';
-      output.title = 'Cần cấu hình GoatCounter endpoint để đếm lượt xem toàn website.';
-      return;
-    }
-
-    let parsed;
-    try { parsed = new URL(endpoint); } catch (e) {
-      output.textContent = 'Endpoint không hợp lệ';
-      return;
-    }
-    if (parsed.protocol !== 'https:') {
-      output.textContent = 'Endpoint không hợp lệ';
-      return;
-    }
-
-    const viewPath = '/posts/' + (file || 'external');
-    window.goatcounter = Object.assign({}, window.goatcounter || {}, { path: viewPath });
-
-    const script = document.createElement('script');
-    script.src = 'https://gc.zgo.at/count.js';
-    script.async = true;
-    script.dataset.goatcounter = endpoint;
-    script.onload = function () {
-      if (!window.goatcounter || typeof window.goatcounter.visit_count !== 'function') {
-        output.textContent = 'Không tải được bộ đếm';
+      if (!gc || typeof gc.visit_count !== 'function') {
+        counterGlobal.textContent = '—';
+        counterGlobal.title = 'Không tải được GoatCounter visit_count().';
         return;
       }
+
       try {
-        window.goatcounter.visit_count({
+        counterGlobal.textContent = '';
+        gc.visit_count({
           append: '#global-view-count',
           path: viewPath,
           no_branding: true
         });
       } catch (error) {
-        output.textContent = 'Không lấy được';
-        console.warn('[views] GoatCounter:', error);
+        counterGlobal.textContent = '—';
+        console.error('[views] visit_count:', error);
       }
-    };
-    script.onerror = function () { output.textContent = 'Không kết nối được'; };
-    document.head.appendChild(script);
+    }
+
+    function stopDwellTimer() {
+      if (dwellTimer !== null) {
+        clearTimeout(dwellTimer);
+        dwellTimer = null;
+      }
+
+      if (visibleSince !== null) {
+        remainingMs = Math.max(0, remainingMs - (Date.now() - visibleSince));
+        visibleSince = null;
+      }
+    }
+
+    function recordView() {
+      if (done || counting || document.visibilityState !== 'visible') return;
+
+      if (inCooldown()) {
+        done = true;
+        return;
+      }
+
+      if (!goatCounter || typeof goatCounter.count !== 'function') {
+        console.warn('[views] Chưa có GoatCounter count(); không ghi nhận lượt xem.');
+        return;
+      }
+
+      counting = true;
+
+      try {
+        // count() gửi pageview đến GoatCounter. API này không cung cấp
+        // xác nhận server đã lưu thành công cho đoạn code gọi này.
+        goatCounter.count({
+          path: viewPath,
+          title: document.title
+        });
+
+        const now = Date.now();
+        storageSet(lastKey, now);
+        storageSet(localKey, localCount() + 1);
+        showLocalCount();
+        done = true;
+
+        // Cập nhật lại số hiển thị sau khi GoatCounter có thời gian xử lý.
+        setTimeout(function () {
+          loadGlobalDisplay(goatCounter);
+        }, 2500);
+      } catch (error) {
+        console.error('[views] GoatCounter count():', error);
+      } finally {
+        counting = false;
+      }
+    }
+
+    function scheduleDwellTimer() {
+      if (done || dwellTimer !== null || document.visibilityState !== 'visible') return;
+
+      if (inCooldown()) {
+        done = true;
+        return;
+      }
+
+      visibleSince = Date.now();
+      dwellTimer = setTimeout(function () {
+        dwellTimer = null;
+        if (visibleSince !== null) {
+          remainingMs = Math.max(0, remainingMs - (Date.now() - visibleSince));
+          visibleSince = null;
+        }
+
+        if (remainingMs > 0 || document.visibilityState !== 'visible') return;
+
+        // Nếu count.js chưa sẵn sàng, đợi tải xong rồi mới ghi nhận.
+        if (!goatCounter) {
+          loadGoatCounter().then(function (gc) {
+            goatCounter = gc;
+            if (goatCounter && document.visibilityState === 'visible') {
+              recordView();
+            }
+          });
+          return;
+        }
+
+        recordView();
+      }, remainingMs);
+    }
+
+    // Khởi tạo script một lần; cùng instance phục vụ cả đọc và ghi.
+    loadGoatCounter().then(function (gc) {
+      goatCounter = gc;
+      loadGlobalDisplay(gc);
+
+      if (!gc && counterGlobal) {
+        counterGlobal.title = 'Kiểm tra request count.js trong Network.';
+      }
+    });
+
+    scheduleDwellTimer();
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') {
+        stopDwellTimer();
+      } else {
+        scheduleDwellTimer();
+      }
+    });
+
+    window.addEventListener('pagehide', stopDwellTimer, { once: true });
   }
 
   function loadGiscus() {
@@ -881,7 +946,6 @@ button:disabled{opacity:.55;cursor:not-allowed}
       ensureScrollToHash();
       updateReadProgress();
       initViews();
-      initGlobalViews();
       loadGiscus();
     } catch (err) {
       showError(err && err.name === 'AbortError' ? 'Timeout' : (err && err.message ? err.message : 'Lỗi tải'));
