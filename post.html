@@ -86,6 +86,8 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--text);line-he
 .comments-hint{font-size:.88rem;color:var(--dim);margin-bottom:1rem;line-height:1.55}
 .comments-hint code{font-family:var(--font-mono);background:#21262d;padding:.1em .35em;border-radius:4px;color:var(--accent);font-size:.85em}
 .comments-hint strong{color:var(--muted)}
+.comments-hint a{color:var(--accent);text-decoration:none}
+.comments-hint a:hover{text-decoration:underline}
 .back-link{display:inline-block;margin-top:2.5rem;font-family:var(--font-mono);font-size:.88rem;color:var(--accent);text-decoration:none}
 footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);font-size:.84rem;color:var(--dim)}
 .giscus,.giscus-frame{color-scheme:dark}
@@ -141,7 +143,8 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       • <strong>Sửa / xóa bình luận của bạn:</strong> mở
       <a href="https://github.com/tranquanghao708/tranquanghao708.github.io/discussions" target="_blank" rel="noopener noreferrer">Discussions của repo</a>,
       vào đúng bài (discussion) bạn đã comment, tìm bình luận của mình rồi Edit / Delete.<br>
-      • Bạn <strong>không thể</strong> chỉnh sửa hay xóa bình luận của người khác.
+      • Bạn <strong>không thể</strong> chỉnh sửa hay xóa bình luận của người khác.<br>
+      • <strong>Term Giscus</strong> = tên file (<code>?file=ten.md</code>). Title discussion cần <em>chứa</em> đúng chuỗi đó; category phải là <strong>General</strong>.
     </p>
     <div id="giscus-container"></div>
   </div>
@@ -168,7 +171,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     viewCooldownMs: 60 * 60 * 1000
   };
 
-  /* Giữ nguyên ID Giscus đã cấu hình — không đổi term format */
+  /* KHÔNG đổi category/term bừa bãi — comment gắn theo category + term */
   const GISCUS = {
     repo: 'tranquanghao708/tranquanghao708.github.io',
     repoId: 'R_kgDOVeKpJQ',
@@ -535,9 +538,9 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   }
 
   /**
-   * Giscus — bình luận public toàn cầu (GitHub Discussions)
-   * term = tên file ?file=... (ổn định, không hardcode từng bài)
-   * Sửa/xóa: đăng nhập GitHub trong widget → Edit/Delete comment của mình
+   * term CỐ ĐỊNH = tên file (?file=xxx.md)
+   * - Đổi term / category → Giscus tìm discussion khác → “mất” comment cũ
+   * - Comment cũ: sửa title discussion cho chứa đúng term + category General
    */
   function loadGiscus() {
     const container = document.getElementById('giscus-container');
@@ -562,7 +565,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     script.setAttribute('data-lang', 'vi');
     script.setAttribute('data-loading', 'lazy');
     container.appendChild(script);
-    console.info('[giscus] term =', term);
+    console.info('[giscus] category =', GISCUS.category, '| term =', term);
   }
 
   async function loadMarkdown() {
