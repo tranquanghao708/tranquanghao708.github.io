@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trần Quang Hào | Low-Level Systems & Reverse Engineering</title>
+    <style>
+        :root {
+            --bg-color: #0f1419;
+            --card-bg: #151d24;
+            --text-color: #c9d1d9;
+            --muted-color: #8b949e;
+            --accent-color: #58a6ff;
+            --alert-bg: #1f2428;
+            --alert-border: #30363d;
+            --border-color: #21262d;
+            --code-color: #79c0ff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            color: var(--accent-color);
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 0.95rem;
+        }
+
+        .disclaimer-box {
+            background-color: var(--alert-bg);
+            border: 1px solid var(--alert-border);
+            border-left: 4px solid var(--accent-color);
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            color: var(--muted-color);
+        }
+
+        .disclaimer-box strong {
+            color: var(--text-color);
+        }
+
+        section {
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            color: #ffffff;
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.3rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+
+        .focus-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .focus-list li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .focus-list li::before {
+            content: ">";
+            position: absolute;
+            left: 0;
+            color: var(--accent-color);
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .code-inline {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            background-color: rgba(110, 118, 129, 0.2);
+            color: var(--code-color);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            color: var(--muted-color);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Trần Quang Hào</h1>
+            <p class="subtitle">[ Low-Level Systems & Reverse Engineering Notes ]</p>
+        </header>
+
+        <div class="disclaimer-box">
+            <strong>⚠️ Thắc mắc về giao diện?</strong><br>
+            Toàn bộ trang web và mã frontend này được khởi tạo bởi AI. Tác giả chuyên tâm nghiên cứu hệ thống low-level và Reverse Engineering, không tập trung vào phát triển web hay thiết kế giao diện frontend.
+        </div>
+
+        <section>
+            <h2>Giới thiệu</h2>
+            <p>Chào mừng bạn đến với không gian lưu trữ và ghi chép cá nhân của mình.</p>
+            <p>Blog này là nơi ghi lại quá trình học tập, nghiên cứu và thử nghiệm các chủ đề liên quan đến kiến trúc hệ thống, phân tích mã độc/phần mềm và lập trình cấp thấp.</p>
+        </section>
+
+        <section>
+            <h2>Lĩnh vực nghiên cứu chính</h2>
+            <ul class="focus-list">
+                <li><span class="code-inline">Reverse Engineering</span> (Binary Analysis, Static & Dynamic Debugging)</li>
+                <li><span class="code-inline">Low-Level Systems</span> (Linux Kernel, Memory Management, System Calls)</li>
+                <li><span class="code-inline">C & Assembly</span> (x86-64 Architecture)</li>
+                <li><span class="code-inline">Binary Exploitation</span> & Security Research</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Mục đích Blog</h2>
+            <p>Website được dựng lên với mục đích chính là một <em>Technical Notebook</em> – lưu trữ tài liệu phân tích kỹ thuật, writeup và các bài viết củng cố kiến thức cá nhân nhằm chống suy giảm ghi nhớ theo thời gian, đồng thời chia sẻ thông tin cho những ai cùng quan tâm.</p>
+        </section>
+
+        <footer>
+            <p>&copy; 2026 tranquanghao708. Powered by GitHub Pages.</p>
+        </footer>
+    </div>
+
+</body>
+</html>
