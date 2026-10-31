@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="referrer" content="no-referrer-when-downgrade">
 <title>Đang tải… | Trần Quang Hào</title>
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Ghi chú kỹ thuật cá nhân của Trần Quang Hào.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬡</text></svg>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.8.1/github-markdown-dark.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
@@ -90,7 +92,27 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--text);line-he
 .comments-hint a:hover{text-decoration:underline}
 .back-link{display:inline-block;margin-top:2.5rem;font-family:var(--font-mono);font-size:.88rem;color:var(--accent);text-decoration:none}
 footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);font-size:.84rem;color:var(--dim)}
-.giscus,.giscus-frame{color-scheme:dark}
+ .giscus,.giscus-frame{color-scheme:dark}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+button:disabled{opacity:.55;cursor:not-allowed}
+.markdown-body a{overflow-wrap:anywhere}
+.markdown-body pre{tab-size:4}
+.markdown-body blockquote{color:var(--muted)}
+.markdown-body input[type=checkbox]{accent-color:var(--accent)}
+.status{min-height:38vh;display:grid;align-content:center;justify-items:center;gap:.4rem}
+.status::before{content:"";width:22px;height:22px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+.status.error::before{display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+@media(max-width:560px){
+  .container{padding-left:1rem;padding-right:1rem}
+  .top-bar{margin-left:-1rem;margin-right:-1rem;padding-left:1rem;padding-right:1rem}
+  .nav{height:48px}.nav-links{gap:.8rem}.nav-links a{font-size:.8rem}
+  .markdown-body{font-size:15px}
+  .share-row input{min-width:0;width:100%}
+  .share-row{align-items:stretch}
+  .btn-copy{min-height:38px}
+}
 </style>
 </head>
 <body>
@@ -118,8 +140,8 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   </article>
 
   <div class="views-bar" id="views-bar" style="display:none">
-    👁 <span id="view-count">0</span> lượt xem
-    <span style="opacity:.7">(ở lại ≥1 phút · 1 view / giờ)</span>
+    <span aria-hidden="true">◉</span> <span id="view-count">0</span> lượt đọc trên thiết bị này
+    <span style="opacity:.7">(đọc ≥1 phút · tối đa 1 lượt/giờ)</span>
   </div>
 
   <div class="share-tools" id="share-tools" style="display:none">
@@ -205,15 +227,32 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   function escapeHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+  function isSafeUrl(value, { image = false } = {}) {
+    if (typeof value !== 'string') return false;
+    const raw = value.trim();
+    if (!raw || /[\u0000-\u001f\u007f]/.test(raw)) return false;
+    if (raw.startsWith('#') || raw.startsWith('/') || raw.startsWith('./') || raw.startsWith('../')) return true;
+    try {
+      const parsed = new URL(raw, location.href);
+      if (parsed.protocol === 'https:' || parsed.protocol === 'http:') return true;
+      return image && parsed.protocol === 'data:' && /^data:image\/(png|gif|jpeg|webp);base64,/i.test(raw);
+    } catch {
+      return false;
+    }
+  }
+
   function sanitizeHtml(dirty) {
     if (typeof DOMPurify === 'undefined') {
-      return String(dirty).replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi,'').replace(/\son\w+\s*=\s*(['"]).*?\1/gi,'').replace(/javascript:/gi,'');
+      throw new Error('DOMPurify chưa tải được; dừng render để tránh chèn HTML không an toàn.');
     }
-    return DOMPurify.sanitize(dirty, {
-      USE_PROFILES:{ html:true },
-      ADD_TAGS:['details','summary','kbd','img'],
-      ADD_ATTR:['open','aria-hidden','target','rel','class','id','src','alt','loading','width','height','data-slug'],
-      FORBID_TAGS:['style','iframe','object','embed','form'], FORBID_ATTR:['style']
+    return DOMPurify.sanitize(String(dirty), {
+      USE_PROFILES: { html: true },
+      ADD_TAGS: ['details','summary','kbd','img'],
+      ADD_ATTR: ['open','aria-hidden','target','rel','class','id','src','alt','loading','width','height','data-slug'],
+      FORBID_TAGS: ['style','iframe','object','embed','form','base','meta','link'],
+      FORBID_ATTR: ['style','srcset','formaction'],
+      ALLOW_DATA_ATTR: false,
+      RETURN_TRUSTED_TYPE: false
     });
   }
   function parseFrontmatter(md) {
@@ -247,25 +286,29 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   }
 
   const renderer = new marked.Renderer();
+  const headingIds = new Map();
   renderer.heading = function ({ text, depth }) {
-    const plain = String(text).replace(/<[^>]+>/g, '');
-    const id = githubSlug(plain);
+    const plain = String(text).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    const base = githubSlug(plain) || 'section';
+    const count = (headingIds.get(base) || 0) + 1;
+    headingIds.set(base, count);
+    const id = count === 1 ? base : `${base}-${count}`;
     const d = Math.min(6, Math.max(1, depth|0));
     return `<h${d} id="${id}" data-slug="${id}">${text}</h${d}>\n`;
   };
   renderer.link = function ({ href, title, text }) {
-    const t = title ? ` title="${String(title).replace(/"/g,'&quot;')}"` : '';
-    let h = String(href||'');
-    if (/^\s*javascript:/i.test(h)) h = '#';
-    const abs = /^https?:\/\//i.test(h);
-    return `<a href="${h.replace(/"/g,'&quot;')}"${t}${abs?' target="_blank" rel="noopener noreferrer nofollow"':''}>${text}</a>`;
+    const h = String(href || '').trim();
+    if (!isSafeUrl(h)) return String(text || '');
+    const t = title ? ` title="${escapeHtml(title)}"` : '';
+    const external = /^https?:\/\//i.test(h);
+    return `<a href="${escapeHtml(h)}"${t}${external ? ' target="_blank" rel="noopener noreferrer nofollow"' : ''}>${text}</a>`;
   };
   renderer.image = function ({ href, title, text }) {
-    let src = String(href||'');
-    if (/^\s*javascript:/i.test(src)) return '';
-    const alt = String(text||'').replace(/"/g,'&quot;');
-    const t = title ? ` title="${String(title).replace(/"/g,'&quot;')}"` : '';
-    return `<img src="${src.replace(/"/g,'&quot;')}" alt="${alt}" loading="lazy"${t}>`;
+    const src = String(href || '').trim();
+    if (!isSafeUrl(src, { image: true })) return '';
+    const alt = escapeHtml(text || '');
+    const t = title ? ` title="${escapeHtml(title)}"` : '';
+    return `<img src="${escapeHtml(src)}" alt="${alt}" loading="lazy" decoding="async"${t}>`;
   };
   renderer.code = function ({ text, lang }) {
     const resolved = resolveLang(lang);
@@ -314,8 +357,10 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   }
   function getPostUrl(hash) {
     const u = new URL(location.href);
+    u.search = '';
+    if (file) u.searchParams.set('file', file);
+    else if (url) u.searchParams.set('url', url);
     u.hash = hash || '';
-    if (!hash) u.hash = '';
     return u.toString();
   }
   function updateReadProgress() {
@@ -379,15 +424,21 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     };
     tick();
   }
-  function copyText(text) {
-    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+  async function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(String(text));
+      return;
+    }
     const ta = document.createElement('textarea');
-    ta.value = text; ta.setAttribute('readonly','');
-    ta.style.cssText = 'position:fixed;left:-9999px';
-    document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); } catch (e) {}
-    document.body.removeChild(ta);
-    return Promise.resolve();
+    ta.value = String(text);
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    let copied = false;
+    try { copied = document.execCommand('copy'); }
+    finally { ta.remove(); }
+    if (!copied) throw new Error('Trình duyệt từ chối thao tác copy.');
   }
   function flashBtn(btn, label) {
     if (!btn) return;
@@ -401,7 +452,10 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       btn.addEventListener('click', function () {
         const code = this.closest('.code-wrap')?.querySelector('code');
         if (!code) return;
-        copyText(code.innerText).then(() => flashBtn(this, 'Copy'));
+        copyText(code.textContent || '').then(
+          () => flashBtn(this, 'Copy'),
+          error => { console.error('[copy]', error); this.textContent = 'Copy lỗi'; }
+        );
       });
     });
   }
@@ -445,12 +499,18 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     const postLink = getPostUrl('');
     document.getElementById('post-link').value = postLink;
     document.getElementById('btn-copy-post').addEventListener('click', function () {
-      copyText(postLink).then(() => flashBtn(this, 'Copy link bài'));
+      copyText(postLink).then(
+        () => flashBtn(this, 'Copy link bài'),
+        error => { console.error('[copy]', error); this.textContent = 'Copy lỗi'; }
+      );
     });
     document.getElementById('btn-copy-section').addEventListener('click', function () {
       const v = document.getElementById('section-link').value;
       if (!v) return alert('Hover heading và bấm # trước.');
-      copyText(v).then(() => flashBtn(this, 'Copy link mục'));
+      copyText(v).then(
+        () => flashBtn(this, 'Copy link mục'),
+        error => { console.error('[copy]', error); this.textContent = 'Copy lỗi'; }
+      );
     });
   }
   function renderMath() {
@@ -478,63 +538,63 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   }
 
   function initViews() {
-    const viewKey = 'views_' + POST_ID;
-    const lastKey = 'viewmeta_' + POST_ID;
-    function displayViews() {
-      let views = parseInt(localStorage.getItem(viewKey) || '0', 10);
-      if (!Number.isFinite(views) || views < 0) views = 0;
-      document.getElementById('view-count').textContent = String(views);
-    }
-    displayViews();
-    function getFingerprint() {
-      const raw = [navigator.userAgent, navigator.language, screen.width+'x'+screen.height, screen.colorDepth, new Date().getTimezoneOffset()].join('|');
-      let hash = 0;
-      for (let i = 0; i < raw.length; i++) { hash = ((hash << 5) - hash) + raw.charCodeAt(i); hash |= 0; }
-      return 'fp_' + Math.abs(hash);
-    }
-    async function fetchClientIp() {
+    const viewKey = 'local_reads_' + POST_ID;
+    const lastKey = 'local_readmeta_' + POST_ID;
+    const counter = document.getElementById('view-count');
+
+    // Số lượt đọc chỉ được lưu trên trình duyệt hiện tại, không phải thống kê toàn website.
+    function readCount() {
       try {
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 4000);
-        const res = await fetch('https://api.ipify.org?format=json', { signal:ctrl.signal, cache:'no-store' });
-        clearTimeout(t);
-        if (!res.ok) return 'unknown';
-        const data = await res.json();
-        return (data && data.ip) ? String(data.ip) : 'unknown';
-      } catch (e) { return 'unknown'; }
-    }
-    const fp = getFingerprint();
-    let cancelled = false, dwellTimer = null;
-    function clearDwell() {
-      cancelled = true;
-      if (dwellTimer) { clearTimeout(dwellTimer); dwellTimer = null; }
-    }
-    window.addEventListener('pagehide', clearDwell);
-    window.addEventListener('beforeunload', clearDwell);
-    async function tryCountView() {
-      if (cancelled) return;
-      let meta = {};
-      try { meta = JSON.parse(localStorage.getItem(lastKey) || '{}'); } catch (e) {}
-      const now = Date.now();
-      if (meta.ts && (now - meta.ts) < CONFIG.viewCooldownMs) {
-        if (meta.fp === fp || (meta.ip && meta.ip !== 'unknown')) return;
+        const value = Number.parseInt(localStorage.getItem(viewKey) || '0', 10);
+        return Number.isFinite(value) && value >= 0 ? value : 0;
+      } catch {
+        return 0;
       }
-      const ip = await fetchClientIp();
-      if (cancelled) return;
-      try { meta = JSON.parse(localStorage.getItem(lastKey) || '{}'); } catch (e) {}
-      if (meta.ts && (now - meta.ts) < CONFIG.viewCooldownMs) {
-        if (meta.fp === fp || (meta.ip && ip !== 'unknown' && meta.ip === ip)) return;
-      }
-      let views = parseInt(localStorage.getItem(viewKey) || '0', 10);
-      if (!Number.isFinite(views) || views < 0) views = 0;
-      views += 1;
+    }
+    function displayCount() {
+      if (counter) counter.textContent = String(readCount());
+    }
+    displayCount();
+
+    let timer = null;
+    let counted = false;
+    const startedAt = Date.now();
+
+    function stop() {
+      if (timer) clearTimeout(timer);
+      timer = null;
+    }
+    function countIfEligible() {
+      if (counted || document.visibilityState !== 'visible') return;
+      if (Date.now() - startedAt < CONFIG.viewDwellMs) return;
+
       try {
-        localStorage.setItem(viewKey, String(views));
-        localStorage.setItem(lastKey, JSON.stringify({ ts:Date.now(), fp, ip }));
-      } catch (e) {}
-      displayViews();
+        const last = Number.parseInt(localStorage.getItem(lastKey) || '0', 10);
+        const now = Date.now();
+        if (Number.isFinite(last) && last > 0 && now - last < CONFIG.viewCooldownMs) return;
+
+        localStorage.setItem(viewKey, String(readCount() + 1));
+        localStorage.setItem(lastKey, String(now));
+        counted = true;
+        displayCount();
+      } catch (error) {
+        console.warn('[reads] localStorage unavailable:', error);
+      }
     }
-    dwellTimer = setTimeout(() => { if (!cancelled) tryCountView(); }, CONFIG.viewDwellMs);
+    function schedule() {
+      stop();
+      if (document.visibilityState === 'visible' && !counted) {
+        const elapsed = Date.now() - startedAt;
+        timer = setTimeout(countIfEligible, Math.max(0, CONFIG.viewDwellMs - elapsed));
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') stop();
+      else schedule();
+    });
+    window.addEventListener('pagehide', stop, { once: true });
+    schedule();
   }
 
   /**
@@ -576,9 +636,16 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     let mdText = '', sourceLabel = '';
     try {
       if (url) {
-        const res = await fetchText(url, { headers:{ Accept:'text/plain' } });
-        if (!res.ok) throw new Error('Không tải được URL');
+        const res = await fetchText(url, { headers:{ Accept:'text/plain' }, redirect:'follow' });
+        if (!res.ok) throw new Error(`Không tải được URL (HTTP ${res.status})`);
+        const finalUrl = new URL(res.url || url);
+        if (finalUrl.protocol !== 'https:' || !ALLOWED_MD_HOSTS.has(finalUrl.hostname)) {
+          throw new Error('URL chuyển hướng tới host không được phép.');
+        }
+        const declaredLength = Number(res.headers.get('content-length') || 0);
+        if (declaredLength > 5 * 1024 * 1024) throw new Error('Markdown vượt quá giới hạn 5 MiB.');
         mdText = await res.text();
+        if (new Blob([mdText]).size > 5 * 1024 * 1024) throw new Error('Markdown vượt quá giới hạn 5 MiB.');
         sourceLabel = 'Nguồn ngoài';
       } else {
         const apiUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/posts/${encodeURIComponent(file)}?ref=${CONFIG.branch}`;
@@ -597,12 +664,20 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
         } catch (e) {}
         const sep = downloadUrl.includes('?') ? '&' : '?';
         const res = await fetchText(`${downloadUrl}${sep}v=${encodeURIComponent(version)}`, { headers:{ Accept:'text/plain' } });
-        if (!res.ok) throw new Error('Không tìm thấy posts/' + file);
+        if (!res.ok) {
+          if (res.status === 404) throw new Error('Không tìm thấy posts/' + file);
+          if (res.status === 403 || res.status === 429) throw new Error('GitHub API/CDN đang giới hạn truy cập. Thử lại sau.');
+          throw new Error(`GitHub trả về HTTP ${res.status}.`);
+        }
+        const declaredLength = Number(res.headers.get('content-length') || 0);
+        if (declaredLength > 5 * 1024 * 1024) throw new Error('Markdown vượt quá giới hạn 5 MiB.');
         mdText = await res.text();
+        if (new Blob([mdText]).size > 5 * 1024 * 1024) throw new Error('Markdown vượt quá giới hạn 5 MiB.');
         sourceLabel = file + ' · v=' + version;
       }
 
       const { meta, body } = parseFrontmatter(mdText);
+      headingIds.clear();
       contentEl.innerHTML = sanitizeHtml(marked.parse(preprocessAlerts(body)));
       contentEl.querySelectorAll('a[href^="http"]').forEach(a => {
         a.setAttribute('rel', 'noopener noreferrer nofollow');
@@ -614,6 +689,8 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       renderTags(meta);
 
       document.getElementById('post-meta').textContent = 'Nguồn: ' + sourceLabel + ' · đang học';
+      articleEl.setAttribute('aria-label', 'Nội dung bài viết');
+      contentEl.setAttribute('tabindex', '-1');
       statusEl.style.display = 'none';
       articleEl.style.display = 'block';
       document.getElementById('views-bar').style.display = 'flex';
