@@ -1,0 +1,38 @@
+/* Thêm sau ll.css: <link rel="stylesheet" href="layout.css"> */
+.container.wide{max-width:1240px}
+.wide .nav{max-width:1240px}
+.layout{display:grid;grid-template-columns:240px minmax(0,1fr) 230px;gap:2rem;align-items:start}
+.side,.rside{position:sticky;top:70px;max-height:calc(100vh - 90px);overflow:auto;font-family:var(--mono);font-size:.82rem}
+.layout .hero{display:block;padding-top:0}
+.profile{text-align:center;padding-bottom:1rem;border-bottom:1px dashed var(--border);margin-bottom:.6rem}
+.avatar{width:84px;height:84px;border-radius:50%;border:2px solid var(--green);object-fit:cover;box-shadow:0 0 16px rgba(63,185,80,.3);margin-bottom:.6rem;background:var(--card)}
+.profile b{display:block;color:#fff}
+.profile small{color:var(--dim)}
+.toc h3{color:var(--green);font-size:.78rem;margin:1rem 0 .3rem}
+.toc h3::before{content:"## "}
+.toc a{display:block;color:var(--muted);text-decoration:none;padding:.15rem 0 .15rem .6rem;border-left:1px solid var(--border);overflow-wrap:anywhere}
+.toc a:hover,.toc a.on{color:var(--accent);border-color:var(--accent)}
+.toc a.ext::after{content:" ↗";color:var(--dim)}
+.rside .chip{margin-bottom:1rem}
+
+/* Trang bài viết: nền riêng */
+body.post{background:#0d1117 linear-gradient(rgba(88,166,255,.04) 1px,transparent 1px) 0 0/100% 32px}
+.crumb{font-family:var(--mono);font-size:.8rem;color:var(--dim);margin-bottom:1rem}
+.crumb a{color:var(--accent);text-decoration:none}
+.md{max-width:760px}
+.md h1{font-size:clamp(1.6rem,4vw,2.1rem);margin-bottom:1rem}
+.md h2{font-size:1.3rem;color:#fff;border-bottom:1px dashed var(--border);margin:2rem 0 .8rem;padding-bottom:.3rem}
+.md h2::before{content:"## ";color:var(--green);font-family:var(--mono)}
+.md h3{font-size:1.05rem;color:#fff;margin:1.4rem 0 .5rem}
+.md p,.md li{margin-bottom:.8rem}
+.md ul,.md ol{padding-left:1.4rem}
+.md a{color:var(--accent)}
+.md code{font-family:var(--mono);background:var(--card);padding:.1em .35em;border-radius:4px;color:var(--amber);font-size:.88em}
+.md pre{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:.9rem 1rem;overflow-x:auto;margin-bottom:1rem}
+.md pre code{background:none;color:var(--text);padding:0}
+.md blockquote{border-left:3px solid var(--green);padding-left:1rem;color:var(--muted);margin-bottom:1rem}
+.md img{max-width:100%;border-radius:var(--r)}
+.md table{border-collapse:collapse;display:block;overflow-x:auto;margin-bottom:1rem}
+.md td,.md th{border:1px solid var(--border);padding:.3rem .6rem}
+
+@media(max-width:1000px){.layout{grid-template-columns:1fr}.side,.rside{position:static;max-height:none}.rside{display:none}}
