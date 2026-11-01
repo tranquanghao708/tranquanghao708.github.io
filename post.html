@@ -16,7 +16,7 @@
 --font-mono:"SFMono-Regular","Cascadia Code","Fira Code",Consolas,Menlo,monospace;
 --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;--radius:8px}
 /* FIX: các class có display:grid/flex/inline-block ghi đè thuộc tính hidden → spinner "Đang tải" không bao giờ biến mất */
-[hidden]{display:none!important}
+[hidden],.status[hidden],.status[hidden]::before{display:none!important}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 body{font-family:var(--font-sans);background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
@@ -1048,6 +1048,8 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
 
       $('post-meta').textContent = 'Nguồn: ' + sourceLabel + (meta.date ? ' · ' + meta.date : '') + ' · đang học';
       statusEl.hidden = true;
+      statusEl.style.display = 'none';
+      statusEl.remove(); // gỡ hẳn khỏi DOM để spinner không thể hiện lại
       ['article', 'views-bar', 'share-tools', 'comments-wrap', 'back-link', 'footer'].forEach(id => { $(id).hidden = false; });
 
       const h1 = contentEl.querySelector('h1');
