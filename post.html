@@ -15,6 +15,8 @@
 <style>:root{--bg:#0d1117;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--dim:#6e7681;--accent:#58a6ff;--code-bg:rgba(110,118,129,.4);--ok:#3fb950;--bad:#f85149;
 --font-mono:"SFMono-Regular","Cascadia Code","Fira Code",Consolas,Menlo,monospace;
 --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;--radius:8px}
+/* FIX: các class có display:grid/flex/inline-block ghi đè thuộc tính hidden → spinner "Đang tải" không bao giờ biến mất */
+[hidden]{display:none!important}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 body{font-family:var(--font-sans);background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
@@ -46,7 +48,7 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--text);line-he
 .btn-code-copy:hover,.btn-code-copy.copied{color:var(--ok);border-color:var(--ok)}
 .markdown-body code{font-family:var(--font-mono);font-size:85%;background:var(--code-bg);padding:.2em .4em;border-radius:6px;color:#e6edf3}
 .markdown-body pre code{background:transparent!important;padding:0!important;font-size:.9em;color:inherit}
-.markdown-body img{max-width:100%;height:auto;border-radius:6px;border:1px solid var(--border);display:block;margin:1rem 0;background:#0a0e14}
+.markdown-body img{max-width:100%;height:auto;border-radius:6px;border:1px solid var(--border);display:block;margin:1rem 0;background:#0a0e14;cursor:zoom-in}
 .markdown-body .math[data-d="1"]{display:block;overflow-x:auto;padding:.5rem 0;margin:1rem 0;text-align:center}
 .markdown-body .katex-display{overflow-x:auto;overflow-y:hidden}
 .markdown-alert{padding:.85rem 1rem;margin:1.25rem 0;border-left:.25em solid;border-radius:0 6px 6px 0;background:#161b22;overflow:hidden;max-width:100%}
@@ -75,6 +77,9 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--text);line-he
 .markdown-body input[type=checkbox]{accent-color:var(--accent);margin-right:.4em}
 .post-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin:0 0 1.25rem}
 .post-tag{font-family:var(--font-mono);font-size:.75rem;color:var(--accent);background:rgba(56,139,253,.12);border:1px solid rgba(56,139,253,.35);border-radius:999px;padding:.2rem .65rem}
+a.post-tag{text-decoration:none;transition:background-color .15s,border-color .15s}
+a.post-tag:hover{background:rgba(56,139,253,.25);border-color:var(--accent)}
+.post-tag.shared{background:rgba(63,185,80,.14);border-color:rgba(63,185,80,.45);color:var(--ok)}
 .post-meta{font-family:var(--font-mono);font-size:.82rem;color:var(--dim);margin-bottom:.75rem}
 .views-bar{margin:2.2rem 0 1rem;padding-top:1.2rem;border-top:1px solid var(--border);font-family:var(--font-mono);font-size:.85rem;color:var(--dim);display:flex;flex-wrap:wrap;gap:.75rem;align-items:center}
 .views-bar .sub{opacity:.7}
@@ -196,7 +201,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       <a href="https://github.com/tranquanghao708/tranquanghao708.github.io/discussions" target="_blank" rel="noopener noreferrer">Discussions của repo</a>,
       vào đúng bài bạn đã comment rồi Edit / Delete.<br>
       • Bạn <strong>không thể</strong> chỉnh sửa hay xóa bình luận của người khác.<br>
-      • <strong>Term Giscus</strong> = tên file (<code>?file=ten.md</code>). Title discussion cần <em>chứa</em> đúng chuỗi đó; category phải là <strong>General</strong>.
+      • <strong>Term Giscus</strong> = tên file (<code>?file=ten.md</code>) hoặc tên thư mục (<code>?post=ten-thu-muc</code>). Title discussion cần <em>chứa</em> đúng chuỗi đó; category phải là <strong>General</strong>.
     </p>
     <div id="giscus-container"></div>
   </div>
@@ -213,14 +218,28 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
 (function () {
   'use strict';
 
+  /*
+   * CẤU TRÚC BÀI VIẾT TRONG posts/
+   *   posts/ten-bai.md                       → ?file=ten-bai.md
+   *   posts/ten-writeup/index.md             → ?post=ten-writeup   (hoặc README.md)
+   *   posts/ten-writeup/images/anh1.png      → trong index.md viết: ![mô tả](images/anh1.png)
+   *
+   * FRONTMATTER (tuỳ chọn):
+   *   ---
+   *   title: Tên bài
+   *   date: 2026-11-01
+   *   tags: [pwn, kernel, reverse-engineering]
+   *   ---
+   */
   const CONFIG = {
     owner: 'tranquanghao708',
     repo: 'tranquanghao708.github.io',
     branch: 'main',
-    fetchTimeoutMs: 20000,
+    fetchTimeoutMs: 15000,
     viewDwellMs: 60 * 1000,
     viewCooldownMs: 60 * 60 * 1000,
-    goatCounterEndpoint: 'https://tranquanghao708.goatcounter.com/count'
+    goatCounterEndpoint: 'https://tranquanghao708.goatcounter.com/count',
+    tagPage: 'notes.html' // trang danh sách; tag click → notes.html?tag=<tag>
   };
   const GISCUS = {
     repo: 'tranquanghao708/tranquanghao708.github.io',
@@ -231,7 +250,13 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   const DISCUSSIONS_URL = 'https://github.com/' + GISCUS.repo + '/discussions';
   const MAX_MD_BYTES = 5 * 1024 * 1024;
   const ALLOWED_MD_HOSTS = new Set(['raw.githubusercontent.com', 'gist.githubusercontent.com']);
-  const SAFE_FILE_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,120}\.md$/;
+  const SEG = '[a-zA-Z0-9][a-zA-Z0-9._-]{0,80}';
+  const SAFE_SLUG_RE = new RegExp('^' + SEG + '$');
+  const SAFE_PATH_RE = new RegExp('^' + SEG + '(?:/' + SEG + '){0,3}\\.md$');
+  const FOLDER_INDEX_RE = /^([^/]+)\/(?:index|readme)\.md$/i;
+  const SITE_BASE = new URL('.', location.href);
+  const POSTS_URL = new URL('posts/', SITE_BASE).href;
+  const RAW_POSTS = 'https://raw.githubusercontent.com/' + CONFIG.owner + '/' + CONFIG.repo + '/' + CONFIG.branch + '/posts/';
   const LANG_MAP = {
     'c++': 'cpp', h: 'c', asm: 'x86asm', assembly: 'x86asm', nasm: 'x86asm', gas: 'x86asm', x86: 'x86asm',
     sh: 'bash', shell: 'bash', zsh: 'bash', py: 'python', js: 'javascript', ts: 'typescript',
@@ -260,17 +285,30 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
 
   /* ---------- Tham số URL ---------- */
   const params = new URLSearchParams(location.search);
-  const fileRaw = params.get('file'), urlRaw = params.get('url');
-  let file = null, url = null;
-  if (fileRaw && SAFE_FILE_RE.test(fileRaw)) file = fileRaw;
-  if (!file && urlRaw) {
+  const fileRaw = (params.get('file') || '').trim();
+  const postRaw = (params.get('post') || params.get('dir') || '').trim();
+  const urlRaw = params.get('url');
+  let file = null;        // đường dẫn .md tương đối trong posts/ (vd "a.md" hoặc "ten-writeup/index.md")
+  let folderSlug = null;  // tên thư mục nếu là bài dạng thư mục
+  let url = null;
+  if (fileRaw && SAFE_PATH_RE.test(fileRaw)) {
+    file = fileRaw;
+    const fm = FOLDER_INDEX_RE.exec(file);
+    if (fm && SAFE_SLUG_RE.test(fm[1])) folderSlug = fm[1];
+  } else if (fileRaw && SAFE_SLUG_RE.test(fileRaw)) {
+    folderSlug = fileRaw;               // ?file=ten-thu-muc cũng được
+  } else if (postRaw && SAFE_SLUG_RE.test(postRaw)) {
+    folderSlug = postRaw;
+  }
+  if (!file && !folderSlug && urlRaw) {
     try {
       const u = new URL(urlRaw);
       if (u.protocol === 'https:' && ALLOWED_MD_HOSTS.has(u.hostname)) url = u.toString();
     } catch (e) {}
   }
-  const POST_ID = (file || url || 'unknown').slice(0, 200);
-  $('status-sub').textContent = file || (url ? 'nguồn ngoài' : '');
+  const POST_ID = (folderSlug || file || url || 'unknown').slice(0, 200);
+  $('status-sub').textContent = folderSlug ? folderSlug + '/' : (file || (url ? 'nguồn ngoài' : ''));
+  let currentTags = [];
 
   function hashStr(s) {
     let h = 5381;
@@ -279,6 +317,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   }
 
   /* ---------- Tiện ích ---------- */
+  const encPath = p => String(p).split('/').map(encodeURIComponent).join('/');
   function githubSlug(text) {
     return String(text).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/đ/g, 'd').replace(/[^a-z0-9\s._-]/g, '').replace(/[\s._]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
@@ -289,6 +328,13 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   function resolveLang(lang) {
     const key = String(lang || '').trim().toLowerCase();
     return (LANG_MAP[key] || key).replace(/[^\w+#-]/g, '');
+  }
+  function viewerHrefFor(target) {
+    const viewer = new URL(location.pathname, location.origin);
+    const fm = FOLDER_INDEX_RE.exec(target);
+    if (fm && SAFE_SLUG_RE.test(fm[1])) viewer.searchParams.set('post', fm[1]);
+    else viewer.searchParams.set('file', target);
+    return viewer;
   }
   function normalizeMarkdownHref(value) {
     const raw = String(value || '').trim();
@@ -301,15 +347,13 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       } else if (url) {
         resolved = new URL(raw, url);
       } else if (file) {
-        const base = new URL('.', location.href);
-        resolved = new URL(raw, new URL('posts/' + encodeURIComponent(file), base));
-        const postsBase = new URL('posts/', base);
+        // Đường dẫn tương đối tính từ thư mục chứa file .md (ảnh trong thư mục bài viết)
+        resolved = new URL(raw, new URL('posts/' + encPath(file), SITE_BASE));
         if (resolved.origin === location.origin && resolved.pathname.toLowerCase().endsWith('.md') &&
-            resolved.pathname.startsWith(postsBase.pathname)) {
-          const target = decodeURIComponent(resolved.pathname.slice(postsBase.pathname.length));
-          if (!SAFE_FILE_RE.test(target)) return null;
-          const viewer = new URL(location.pathname, location.origin);
-          viewer.searchParams.set('file', target);
+            resolved.pathname.startsWith(new URL(POSTS_URL).pathname)) {
+          const target = decodeURIComponent(resolved.pathname.slice(new URL(POSTS_URL).pathname.length));
+          if (!SAFE_PATH_RE.test(target)) return null;
+          const viewer = viewerHrefFor(target);
           viewer.hash = resolved.hash;
           return viewer.href;
         }
@@ -399,7 +443,8 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
           let m = /^\$\$([^\n]+?)\$\$/.exec(src);
           if (m) return { type: 'mathInline', raw: m[0], text: m[1].trim(), display: true };
           // $...$: không khoảng trắng sát dấu, không phải số tiền ($5, $10)
-          m = /^\\\((.+?)\\\)/.exec(src) || /^\$(?![\s$])((?:\\.|[^$\\\n])+?)(?<!\s)\$(?!\d)/.exec(src);
+          // (không dùng lookbehind để chạy được trên Safari cũ)
+          m = /^\\\((.+?)\\\)/.exec(src) || /^\$(?![\s$])((?:\\.|[^$\\\n\s]|[^$\\\n\s][^$\\\n]*?[^$\\\n\s])+?)\$(?!\d)/.exec(src);
           if (m) return { type: 'mathInline', raw: m[0], text: m[1] };
         },
         renderer(t) { return mathPH(t.text, !!t.display); }
@@ -407,21 +452,43 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     ]
   });
 
+  /* Frontmatter: hỗ trợ  tags: [a, b]  và dạng danh sách  tags:\n  - a\n  - b */
   function parseFrontmatter(md) {
     md = md.replace(/^\uFEFF/, '');
     const m = md.match(/^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)([\s\S]*)$/);
     if (!m) return { meta: {}, body: md };
     const meta = {};
+    const clean = s => String(s).trim().replace(/^["']|["']$/g, '');
+    let key = null;
     m[1].split(/\r?\n/).forEach(line => {
+      const item = line.match(/^\s*-\s+(.*)$/);
+      if (item && key) {
+        if (!Array.isArray(meta[key])) meta[key] = [];
+        meta[key].push(clean(item[1]));
+        return;
+      }
       const kv = line.match(/^([\w-]+)\s*:\s*(.*)$/);
       if (!kv) return;
+      key = kv[1].toLowerCase();
       let val = kv[2].trim();
       if (val.startsWith('[') && val.endsWith(']')) {
-        val = val.slice(1, -1).split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
-      } else val = val.replace(/^["']|["']$/g, '');
-      meta[kv[1].toLowerCase()] = val;
+        val = val.slice(1, -1).split(',').map(clean).filter(Boolean);
+      } else val = clean(val);
+      meta[key] = val;
     });
     return { meta, body: m[2] };
+  }
+  function getTags(meta, limit) {
+    let tags = meta.tags || meta.tag || meta.categories || [];
+    if (typeof tags === 'string') tags = tags.split(',');
+    if (!Array.isArray(tags)) return [];
+    const seen = new Set(), out = [];
+    tags.forEach(t => {
+      const v = String(t).trim().replace(/^#+/, '').slice(0, 40);
+      const k = v.toLowerCase();
+      if (v && !seen.has(k)) { seen.add(k); out.push(v); }
+    });
+    return out.slice(0, limit || 12);
   }
 
   function transformAlerts() {
@@ -453,6 +520,22 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     });
   }
 
+  /* Ảnh trong thư mục bài: nếu bản trên site chưa deploy → tự thử raw.githubusercontent; click để mở ảnh gốc */
+  function setupImages() {
+    contentEl.querySelectorAll('img').forEach(img => {
+      img.addEventListener('error', () => {
+        if (img.dataset.fb) return;
+        img.dataset.fb = '1';
+        const s = img.currentSrc || img.src;
+        if (s.startsWith(POSTS_URL)) img.src = RAW_POSTS + s.slice(POSTS_URL.length).split('?')[0];
+      });
+      img.addEventListener('click', () => {
+        const s = img.currentSrc || img.src;
+        if (/^(https?:|data:image\/)/i.test(s)) window.open(s, '_blank', 'noopener');
+      });
+    });
+  }
+
   /* ---------- Copy / chia sẻ / điều hướng mục ---------- */
   async function copyText(text) {
     if (navigator.clipboard && window.isSecureContext) {
@@ -481,7 +564,9 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   function getPostUrl(hash) {
     const u = new URL(location.href);
     u.search = '';
-    if (file) u.searchParams.set('file', file); else if (url) u.searchParams.set('url', url);
+    if (folderSlug) u.searchParams.set('post', folderSlug);
+    else if (file) u.searchParams.set('file', file);
+    else if (url) u.searchParams.set('url', url);
     u.hash = hash || '';
     return u.toString();
   }
@@ -577,12 +662,21 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       copyWithFeedback(this, 'Copy link mục', v);
     });
   }
-  function renderTags(meta) {
+  function tagHref(t) {
+    return CONFIG.tagPage + '?tag=' + encodeURIComponent(t);
+  }
+  function renderTags(tags) {
     const box = $('post-tags');
-    let tags = meta.tags || meta.tag || [];
-    if (typeof tags === 'string') tags = tags.split(',').map(s => s.trim()).filter(Boolean);
-    if (!Array.isArray(tags) || !tags.length) { box.hidden = true; return; }
-    box.innerHTML = tags.map(t => '<span class="post-tag">' + escapeHtml(t) + '</span>').join('');
+    box.textContent = '';
+    if (!tags.length) { box.hidden = true; return; }
+    tags.forEach(t => {
+      const a = document.createElement('a');
+      a.className = 'post-tag';
+      a.href = tagHref(t);
+      a.textContent = '#' + t;
+      a.title = 'Xem tất cả bài có tag "' + t + '"';
+      box.appendChild(a);
+    });
     box.hidden = false;
   }
   function updateReadProgress() {
@@ -596,7 +690,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   /* ---------- Lượt xem (GoatCounter) ---------- */
   function initViews() {
     const endpoint = String(CONFIG.goatCounterEndpoint || '').trim();
-    const viewPath = file ? '/posts/' + file : '/external/' + hashStr(url || 'unknown');
+    const viewPath = url ? '/external/' + hashStr(url) : '/posts/' + (folderSlug || file);
     const elLocal = $('view-count'), elGlobal = $('global-view-count');
     const localKey = 'local_reads_' + POST_ID, lastKey = 'gc_last_' + POST_ID;
 
@@ -698,7 +792,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   function loadGiscus() {
     const box = $('giscus-container');
     box.textContent = '';
-    const term = file || (url ? 'external:' + url.slice(0, 180) : 'general');
+    const term = folderSlug || file || (url ? 'external:' + url.slice(0, 180) : 'general');
     const s = document.createElement('script');
     s.src = 'https://giscus.app/client.js';
     s.async = true;
@@ -728,15 +822,11 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   function initRelated() {
     const box = $('related'), grid = $('related-grid');
     if (!box || !grid) return;
-    const WANT = 3, LIST_KEY = 'posts_list_v1', LIST_TTL = 10 * 60 * 1000, MAX_SUMMARY_BYTES = 512 * 1024;
+    const WANT = 3, POOL = 9, LIST_KEY = 'posts_list_v2', LIST_TTL = 10 * 60 * 1000, MAX_SUMMARY_BYTES = 512 * 1024;
     let started = false;
     const ss = {
       get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
       set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
-    };
-    const safeRaw = u => {
-      try { const x = new URL(u); return x.protocol === 'https:' && x.hostname === 'raw.githubusercontent.com' ? x.href : ''; }
-      catch (e) { return ''; }
     };
     const titleFromName = n => n.replace(/\.md$/i, '').replace(/[-_]+/g, ' ').replace(/(^|\s)\S/g, c => c.toUpperCase());
     const plainText = md => String(md)
@@ -753,38 +843,60 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       }
       box.hidden = false;
     }
+    // Liệt kê toàn bộ bài bằng 1 request (git trees): file .md ở gốc posts/ + thư mục có index.md / README.md
     async function getList() {
       try {
         const c = JSON.parse(ss.get(LIST_KEY) || 'null');
         if (c && Date.now() - c.t < LIST_TTL && Array.isArray(c.items)) return c.items;
       } catch (e) {}
       const res = await fetchWithTimeout('https://api.github.com/repos/' + CONFIG.owner + '/' + CONFIG.repo +
-        '/contents/posts?ref=' + CONFIG.branch, { headers: { Accept: 'application/vnd.github+json' } }, 10000);
+        '/git/trees/' + CONFIG.branch + '?recursive=1', { headers: { Accept: 'application/vnd.github+json' } }, 10000);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
-      const items = (Array.isArray(data) ? data : [])
-        .filter(f => f && f.type === 'file' && typeof f.name === 'string' && SAFE_FILE_RE.test(f.name))
-        .map(f => ({ name: f.name, size: f.size | 0, dl: safeRaw(f.download_url) }))
-        .sort((a, b) => b.name.localeCompare(a.name));
+      const flat = [], folders = new Map();
+      (Array.isArray(data.tree) ? data.tree : []).forEach(n => {
+        if (!n || n.type !== 'blob' || typeof n.path !== 'string' || !n.path.startsWith('posts/') || !/\.md$/i.test(n.path)) return;
+        const rel = n.path.slice(6), parts = rel.split('/');
+        if (parts.length === 1) {
+          if (SAFE_PATH_RE.test(rel)) flat.push({ id: rel, path: rel, query: 'file=' + encodeURIComponent(rel), size: n.size | 0 });
+        } else if (parts.length === 2 && SAFE_SLUG_RE.test(parts[0])) {
+          const b = parts[1].toLowerCase(), rank = b === 'index.md' ? 0 : b === 'readme.md' ? 1 : -1;
+          if (rank < 0 || !SAFE_PATH_RE.test(rel)) return;
+          const cur = folders.get(parts[0]);
+          if (!cur || rank < cur.rank) folders.set(parts[0], { id: parts[0], path: rel, query: 'post=' + encodeURIComponent(parts[0]), size: n.size | 0, rank, folder: true });
+        }
+      });
+      const items = flat.concat(Array.from(folders.values())).sort((a, b) => b.id.localeCompare(a.id));
       ss.set(LIST_KEY, JSON.stringify({ t: Date.now(), items }));
       return items;
     }
-    // Lấy 3 bài kế tiếp theo vòng tròn: ổn định, không trùng, không gồm bài đang đọc.
+    // Lấy các bài kế tiếp theo vòng tròn (không gồm bài đang đọc)
     function pick(items) {
-      const idx = items.findIndex(p => p.name === file);
-      if (idx < 0) return items.slice(0, WANT);
+      const cur = folderSlug || file;
+      const idx = items.findIndex(p => p.id === cur);
+      if (idx < 0) return items.slice(0, POOL);
       const out = [];
-      for (let k = 1; k < items.length && out.length < WANT; k++) out.push(items[(idx + k) % items.length]);
+      for (let k = 1; k < items.length && out.length < POOL; k++) out.push(items[(idx + k) % items.length]);
       return out;
     }
+    async function fetchSummaryText(p) {
+      for (const u of [POSTS_URL + encPath(p.path), RAW_POSTS + encPath(p.path)]) {
+        try {
+          const res = await fetchWithTimeout(u, {}, 8000);
+          if (!res.ok) continue;
+          if (parseInt(res.headers.get('content-length') || '0', 10) > MAX_SUMMARY_BYTES) return null;
+          const text = await res.text();
+          if (text.length > MAX_SUMMARY_BYTES || /^\s*<(!doctype|html)/i.test(text)) continue;
+          return text;
+        } catch (e) {}
+      }
+      return null;
+    }
     async function summarize(p) {
-      const info = { name: p.name, title: titleFromName(p.name), excerpt: '', tags: [], mins: Math.max(1, Math.round(p.size / 1100)) };
+      const info = { id: p.id, query: p.query, title: titleFromName(p.id), excerpt: '', allTags: [], mins: Math.max(1, Math.round(p.size / 1100)), folder: !!p.folder };
+      const text = await fetchSummaryText(p);
+      if (!text) return info;
       try {
-        const res = await fetchWithTimeout(p.dl || ('posts/' + encodeURIComponent(p.name)), {}, 8000);
-        if (!res.ok) return info;
-        if (parseInt(res.headers.get('content-length') || '0', 10) > MAX_SUMMARY_BYTES) return info;
-        const text = await res.text();
-        if (text.length > MAX_SUMMARY_BYTES) return info;
         const { meta, body } = parseFrontmatter(text);
         const h1 = body.match(/^#\s+(.+?)\s*#*\s*$/m);
         const t = plainText(meta.title || (h1 && h1[1]) || '').slice(0, 120);
@@ -795,11 +907,9 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
           const ex = plainText(para);
           info.excerpt = ex.length > 150 ? ex.slice(0, 147).trimEnd() + '…' : ex;
         }
-        let tags = meta.tags || meta.tag || [];
-        if (typeof tags === 'string') tags = tags.split(',').map(x => x.trim());
-        if (Array.isArray(tags)) info.tags = tags.filter(Boolean).slice(0, 3).map(x => String(x).slice(0, 24));
+        info.allTags = getTags(meta, 12);
         info.mins = Math.max(1, Math.round(body.trim().split(/\s+/).length / 200));
-      } catch (e) { /* giữ thông tin dự phòng từ tên file */ }
+      } catch (e) { /* giữ thông tin dự phòng */ }
       return info;
     }
     function el(tag, cls, text) {
@@ -808,20 +918,22 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       if (text != null) n.textContent = text;
       return n;
     }
-    function card(info, i) {
+    function card(info, i, cur) {
       const a = el('a', 'rel-card');
       const u = new URL(location.pathname, location.origin);
-      u.searchParams.set('file', info.name);
+      const q = info.query.split('=');
+      u.searchParams.set(q[0], decodeURIComponent(q[1]));
       a.href = u.pathname + u.search;
       a.style.setProperty('--i', i);
       a.setAttribute('aria-label', 'Đọc bài: ' + info.title);
       const meta = el('div', 'rel-meta');
-      meta.append(el('span', '', info.name), el('span', '', '~' + info.mins + ' phút'));
+      meta.append(el('span', '', info.folder ? info.id + '/' : info.id), el('span', '', '~' + info.mins + ' phút'));
       a.append(meta, el('div', 'rel-title', info.title));
       if (info.excerpt) a.append(el('p', 'rel-excerpt', info.excerpt));
       const foot = el('div', 'rel-foot');
       const tags = el('div', 'rel-tags');
-      info.tags.forEach(t => tags.append(el('span', 'post-tag', t)));
+      const sorted = info.allTags.slice().sort((x, y) => cur.has(y.toLowerCase()) - cur.has(x.toLowerCase()));
+      sorted.slice(0, 3).forEach(t => tags.append(el('span', 'post-tag' + (cur.has(t.toLowerCase()) ? ' shared' : ''), '#' + t)));
       foot.append(tags, el('span', 'rel-go', 'Đọc tiếp →'));
       a.append(foot);
       return a;
@@ -834,8 +946,11 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
         const chosen = pick(await getList());
         if (!chosen.length) { box.hidden = true; return; }
         const infos = await Promise.all(chosen.map(summarize));
+        const cur = new Set(currentTags.map(t => t.toLowerCase()));
+        infos.forEach((x, i) => { x.score = x.allTags.filter(t => cur.has(t.toLowerCase())).length; x.ord = i; });
+        infos.sort((a, b) => b.score - a.score || a.ord - b.ord); // ưu tiên bài chung tag
         grid.textContent = '';
-        infos.forEach((inf, i) => grid.appendChild(card(inf, i)));
+        infos.slice(0, WANT).forEach((inf, i) => grid.appendChild(card(inf, i, cur)));
       } catch (e) {
         console.warn('[related]', e);
         box.hidden = true; // lỗi thì ẩn êm, không làm hỏng trang
@@ -866,9 +981,32 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     if (text.length > MAX_MD_BYTES) throw new Error('Markdown vượt quá giới hạn 5 MiB.');
     return text;
   }
+  // Thử bản trên chính site (nhanh, cùng origin, không dính rate-limit API) rồi mới tới raw.githubusercontent.
+  // Trả về null nếu cả hai đều 404.
+  async function fetchPost(path) {
+    const enc = encPath(path), bust = '?v=' + Date.now();
+    const attempts = [
+      { label: 'site', href: POSTS_URL + enc + bust },
+      { label: 'github', href: RAW_POSTS + enc + bust }
+    ];
+    let all404 = true, lastErr = null;
+    for (const a of attempts) {
+      try {
+        const res = await fetchWithTimeout(a.href, {}, 12000);
+        if (res.status === 404) continue;
+        all404 = false;
+        if (!res.ok) { lastErr = new Error('HTTP ' + res.status); continue; }
+        const text = await readTextLimited(res);
+        if (/^\s*<(!doctype|html)/i.test(text)) { lastErr = new Error('Server trả về HTML thay vì Markdown.'); continue; }
+        return { text, source: a.label };
+      } catch (e) { all404 = false; lastErr = e; }
+    }
+    if (all404) return null;
+    throw lastErr || new Error('Không tải được bài viết.');
+  }
 
   async function loadMarkdown() {
-    if (!file && !url) { showError('Thiếu hoặc không hợp lệ: ?file=ten.md'); return; }
+    if (!file && !folderSlug && !url) { showError('Thiếu hoặc không hợp lệ: ?file=ten.md hoặc ?post=ten-thu-muc'); return; }
     try {
       let mdText, sourceLabel;
       if (url) {
@@ -879,25 +1017,17 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
         mdText = await readTextLimited(res);
         sourceLabel = 'Nguồn ngoài';
       } else {
-        // Lấy sha để chống cache; nếu API bị giới hạn thì dùng bản trong site.
-        let downloadUrl = 'posts/' + encodeURIComponent(file), version = String(Date.now());
-        try {
-          const apiRes = await fetchWithTimeout('https://api.github.com/repos/' + CONFIG.owner + '/' + CONFIG.repo +
-            '/contents/posts/' + encodeURIComponent(file) + '?ref=' + CONFIG.branch, { headers: { Accept: 'application/vnd.github+json' } });
-          if (apiRes.ok) {
-            const info = await apiRes.json();
-            if (info && info.download_url && new URL(info.download_url).hostname === 'raw.githubusercontent.com') downloadUrl = info.download_url;
-            if (info && info.sha) version = info.sha.slice(0, 8);
-          }
-        } catch (e) {}
-        const res = await fetchWithTimeout(downloadUrl + (downloadUrl.includes('?') ? '&' : '?') + 'v=' + encodeURIComponent(version));
-        if (!res.ok) {
-          if (res.status === 404) throw new Error('Không tìm thấy posts/' + file);
-          if (res.status === 403 || res.status === 429) throw new Error('GitHub đang giới hạn truy cập. Thử lại sau.');
-          throw new Error('GitHub trả về HTTP ' + res.status);
+        const candidates = file ? [file] : [folderSlug + '/index.md', folderSlug + '/README.md', folderSlug + '/readme.md'];
+        let got = null;
+        for (const c of candidates) {
+          got = await fetchPost(c);
+          if (got) { file = c; break; }
         }
-        mdText = await readTextLimited(res);
-        sourceLabel = file + ' · v=' + version;
+        if (!got) throw new Error(folderSlug && !candidates.includes(fileRaw)
+          ? 'Không tìm thấy posts/' + folderSlug + '/index.md (hoặc README.md)'
+          : 'Không tìm thấy posts/' + candidates[0]);
+        mdText = got.text;
+        sourceLabel = (folderSlug ? folderSlug + '/' : file) + ' · ' + got.source;
       }
 
       const { meta, body } = parseFrontmatter(mdText);
@@ -912,7 +1042,9 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       renderMath();
       enhanceCodeBlocks();
       enhanceHeadings();
-      renderTags(meta);
+      setupImages();
+      currentTags = getTags(meta);
+      renderTags(currentTags);
 
       $('post-meta').textContent = 'Nguồn: ' + sourceLabel + (meta.date ? ' · ' + meta.date : '') + ' · đang học';
       statusEl.hidden = true;
@@ -921,17 +1053,20 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       const h1 = contentEl.querySelector('h1');
       const title = meta.title || (h1 ? h1.textContent.replace(/^#/, '').replace(/\s+/g, ' ').trim() : 'Bài viết');
       document.title = String(title).slice(0, 80) + ' | Trần Quang Hào';
-
-      setupShareTools();
-      ensureScrollToHash();
-      updateReadProgress();
-      initViews();
-      loadGiscus();
-      initRelated();
     } catch (err) {
       showError(err && err.name === 'AbortError' ? 'Hết thời gian chờ (timeout).' : (err && err.message) || 'Lỗi tải');
       console.error(err);
+      return;
     }
+
+    // Các phần phụ: lỗi ở đây không được làm hỏng bài đã hiển thị
+    const safely = (name, fn) => { try { fn(); } catch (e) { console.warn('[' + name + ']', e); } };
+    safely('share', setupShareTools);
+    safely('hash', ensureScrollToHash);
+    safely('progress', updateReadProgress);
+    safely('views', initViews);
+    safely('giscus', loadGiscus);
+    safely('related', initRelated);
   }
 
   window.addEventListener('hashchange', () => scrollToHash('smooth'));
