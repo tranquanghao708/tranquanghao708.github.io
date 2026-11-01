@@ -9,15 +9,22 @@
 <link rel="stylesheet" href="ll.css">
 <style>
 [hidden]{display:none!important}
-.filter{display:flex;align-items:center;gap:.5rem;font-family:var(--mono);font-size:.85rem;margin-bottom:.9rem;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:.5rem .8rem}
+.tools{display:flex;gap:.6rem;align-items:stretch;flex-wrap:wrap;margin-bottom:.9rem}
+.filter{flex:1;min-width:220px;display:flex;align-items:center;gap:.5rem;font-family:var(--mono);font-size:.85rem;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:.5rem .8rem}
 .filter span{color:var(--green);white-space:nowrap}
 .filter input{flex:1;background:none;border:0;outline:0;color:var(--text);font:inherit;min-width:0}
+.seg{display:flex;gap:.3rem;align-items:center}
+.btn{font-family:var(--mono);font-size:.78rem;color:var(--muted);background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:.4rem .75rem;cursor:pointer}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.on{border-color:var(--accent);color:#0d1117;background:var(--accent)}
 .tagbar{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.1rem}
 .tagbtn,.tg{font-family:var(--mono);font-size:.74rem;color:var(--accent);background:rgba(56,139,253,.12);border:1px solid rgba(56,139,253,.35);border-radius:999px;padding:.15rem .6rem;cursor:pointer;line-height:1.5}
 .tagbtn:hover,.tg:hover{background:rgba(56,139,253,.25);border-color:var(--accent)}
 .tagbtn.on,.tg.on{background:var(--accent);color:#0d1117;border-color:var(--accent)}
 .tagbtn small{opacity:.7;margin-left:.25rem}
-.count{font-family:var(--mono);font-size:.78rem;color:var(--dim);margin-bottom:.8rem}
+.count{font-family:var(--mono);font-size:.78rem;color:var(--dim);margin-bottom:.3rem}
+.scan{font-family:var(--mono);font-size:.72rem;color:var(--dim);opacity:.8;margin-bottom:.9rem}
+.scan b{color:var(--green);font-weight:600}
 .status{text-align:center;padding:2.5rem 1rem;color:var(--dim);font-family:var(--mono);font-size:.9rem}
 .status.error{color:var(--red)}
 .post-list{display:grid;gap:.8rem}
@@ -30,6 +37,16 @@
 .post-card h2::before{content:"> ";color:var(--green);font-family:var(--mono)}
 .post-card p{font-size:.85rem;color:var(--muted);margin-top:.3rem}
 .post-card .tags{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.55rem}
+.grp{border:1px solid var(--border);border-radius:var(--r);background:rgba(255,255,255,.015)}
+.grp>summary{cursor:pointer;list-style:none;padding:.75rem 1rem;font-family:var(--mono);font-size:.9rem;color:#fff;display:flex;gap:.6rem;align-items:baseline;flex-wrap:wrap}
+.grp>summary::-webkit-details-marker{display:none}
+.grp>summary::before{content:"\25B8";color:var(--accent);display:inline-block;transition:transform .15s}
+.grp[open]>summary::before{transform:rotate(90deg)}
+.grp-name{color:var(--accent);overflow-wrap:anywhere}
+.grp small{color:var(--dim);font-size:.75rem}
+.grp-list{display:grid;gap:.7rem;padding:0 .8rem .8rem}
+.grp-empty{border:1px dashed var(--border);border-radius:var(--r);padding:.8rem 1rem;font-family:var(--mono);font-size:.8rem;color:var(--dim)}
+.grp-empty b{color:#d29922;font-weight:600}
 .empty{border:1px dashed var(--border);border-radius:var(--r);padding:2.2rem 1.5rem;text-align:center;color:var(--dim)}
 .empty code{font-family:var(--mono);color:var(--accent)}
 </style>
@@ -48,12 +65,20 @@
   </div>
 
   <h1>Ghi chú &amp; Writeup</h1>
-  <p class="subtitle">$ find posts/ -name "*.md"</p>
-  <p class="tagline" style="margin-bottom:1.6rem">Tự động quét thư mục <code style="font-family:var(--mono);color:var(--accent)">posts/</code> (kể cả thư mục con). Mỗi bài có thể nằm trong một thư mục riêng cùng ảnh của nó, gắn <code style="font-family:var(--mono);color:var(--accent)">tags</code> trong frontmatter để lọc.</p>
+  <p class="subtitle">$ tree posts/</p>
+  <p class="tagline" style="margin-bottom:1.6rem">Tự động quét thư mục <code style="font-family:var(--mono);color:var(--accent)">posts/</code> trên GitHub, kể cả thư mục con. Mỗi writeup nằm trong một thư mục riêng cùng ảnh của nó; gắn <code style="font-family:var(--mono);color:var(--accent)">tags</code> trong frontmatter để lọc.</p>
 
-  <label class="filter" id="filter" hidden><span>$ grep -i</span><input id="q" type="search" placeholder="từ khoá, tên file, tag…" autocomplete="off" spellcheck="false" aria-label="Lọc bài viết"></label>
+  <div class="tools" id="tools" hidden>
+    <label class="filter"><span>$ grep -i</span><input id="q" type="search" placeholder="từ khoá, tên file, tag…" autocomplete="off" spellcheck="false" aria-label="Lọc bài viết"></label>
+    <div class="seg">
+      <button type="button" class="btn" id="v-tree" title="Nhóm theo thư mục">tree</button>
+      <button type="button" class="btn" id="v-list" title="Danh sách phẳng">ls</button>
+      <button type="button" class="btn" id="refresh" title="Quét lại posts/ trên GitHub">↻ quét lại</button>
+    </div>
+  </div>
   <div class="tagbar" id="tagbar" hidden></div>
   <div class="count" id="count" hidden></div>
+  <div class="scan" id="scan" hidden></div>
   <div id="status" class="status" role="status">Đang quét thư mục posts/<span class="cur"></span></div>
   <div id="post-list" class="post-list" hidden></div>
 
@@ -69,10 +94,12 @@
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
   var esc = POSTS.esc;
-  var statusEl = $('status'), listEl = $('post-list'), filterEl = $('filter'), q = $('q'), tagbar = $('tagbar'), countEl = $('count');
-  var posts = [], activeTag = '';
+  var statusEl = $('status'), listEl = $('post-list'), toolsEl = $('tools'), q = $('q'), tagbar = $('tagbar'), countEl = $('count'), scanEl = $('scan');
+  var T = null, posts = [];
   var params = new URLSearchParams(location.search);
-  activeTag = (params.get('tag') || '').trim().replace(/^#/, '');
+  var activeTag = (params.get('tag') || '').trim().replace(/^#/, '');
+  var view = params.get('view') || (function () { try { return localStorage.getItem('notes_view'); } catch (e) { return null; } })() || 'tree';
+  if (view !== 'list') view = 'tree';
   q.value = params.get('q') || '';
 
   var fmtSize = function (b) { return b < 1024 ? b + 'B' : (b / 1024).toFixed(1) + 'K'; };
@@ -81,7 +108,9 @@
     u.search = '';
     if (activeTag) u.searchParams.set('tag', activeTag);
     if (q.value.trim()) u.searchParams.set('q', q.value.trim());
+    if (view === 'list') u.searchParams.set('view', 'list');
     history.replaceState(null, '', u.pathname + u.search);
+    try { localStorage.setItem('notes_view', view); } catch (e) {}
   }
   function hasTag(p, t) { return p.tags.some(function (x) { return x.toLowerCase() === t.toLowerCase(); }); }
 
@@ -95,29 +124,64 @@
     }).join('');
     tagbar.hidden = false;
   }
+  function card(p) {
+    return '<a class="post-card" href="' + esc(p.href) + '">' +
+      '<div class="post-meta"><span class="perm">-rw-r--r--</span><span>' + fmtSize(p.size) + '</span>' +
+      (p.date ? '<span>' + esc(p.date) + '</span>' : '') + '<span class="path">' + esc(p.path) + '</span><span>~' + p.mins + ' phút</span></div>' +
+      '<h2>' + esc(p.title) + '</h2>' +
+      (p.excerpt ? '<p>' + esc(p.excerpt) + '</p>' : '') +
+      (p.tags.length ? '<div class="tags">' + p.tags.map(function (t) {
+        return '<span class="tg' + (activeTag.toLowerCase() === t.toLowerCase() ? ' on' : '') + '" data-tag="' + esc(t) + '">#' + esc(t) + '</span>';
+      }).join('') + '</div>' : '') + '</a>';
+  }
+  function renderTree(shown, filtering) {
+    var order = [], map = {};
+    shown.forEach(function (p) {
+      if (!(p.folder in map)) { map[p.folder] = []; order.push(p.folder); }
+      map[p.folder].push(p);
+    });
+    order.sort(function (a, b) { return (a === '' ? 1 : 0) - (b === '' ? 1 : 0); }); // bài lẻ ở cuối
+    var html = order.map(function (k) {
+      var d = T.dirs[k], n = map[k].length;
+      var stats = n + ' bài' + (d && d.img ? ' · ' + d.img + ' ảnh' : '');
+      var name = k ? '📁 <span class="grp-name">' + esc(k) + '/</span>' : '📄 <span class="grp-name">posts/</span> <small>(bài lẻ)</small>';
+      return '<details class="grp" open><summary>' + name + '<small>' + stats + '</small></summary><div class="grp-list">' +
+        map[k].map(card).join('') + '</div></details>';
+    }).join('');
+    if (!filtering) {
+      // thư mục cấp 1 chưa có file .md → báo rõ để biết vì sao không thấy bài
+      Object.keys(T.dirs).filter(function (k) { return k.indexOf('/') < 0 && T.dirs[k].mdTotal === 0; }).sort().forEach(function (k) {
+        var d = T.dirs[k];
+        html += '<div class="grp-empty">📁 ' + esc(k) + '/ · ' + d.files + ' file' + (d.img ? ', ' + d.img + ' ảnh' : '') +
+          ' — <b>chưa có file .md</b>. Thêm <code>writeup.md</code> vào thư mục này để bài hiện lên.</div>';
+      });
+    }
+    return html;
+  }
   function render() {
-    var kw = q.value.trim().toLowerCase();
+    var kw = q.value.trim().toLowerCase(), filtering = !!(kw || activeTag);
     var shown = posts.filter(function (p) {
       if (activeTag && !hasTag(p, activeTag)) return false;
       if (!kw) return true;
       return (p.path + ' ' + p.title + ' ' + p.excerpt + ' ' + p.tags.join(' ')).toLowerCase().indexOf(kw) >= 0;
     });
+    $('v-tree').classList.toggle('on', view === 'tree');
+    $('v-list').classList.toggle('on', view === 'list');
     countEl.hidden = false;
     countEl.textContent = shown.length + ' / ' + posts.length + ' bài' + (activeTag ? ' · tag: #' + activeTag : '');
-    if (!shown.length) {
+    if (!shown.length && (filtering || !Object.keys(T.dirs).length)) {
       listEl.innerHTML = '<div class="empty">grep: không có kết quả' + (activeTag ? ' cho tag "' + esc(activeTag) + '"' : '') + '</div>';
       return;
     }
-    listEl.innerHTML = shown.map(function (p) {
-      return '<a class="post-card" href="' + esc(p.href) + '">' +
-        '<div class="post-meta"><span class="perm">' + (p.folder ? 'drwxr-xr-x' : '-rw-r--r--') + '</span><span>' + fmtSize(p.size) + '</span>' +
-        (p.date ? '<span>' + esc(p.date) + '</span>' : '') + '<span class="path">' + esc(p.path) + '</span><span>~' + p.mins + ' phút</span></div>' +
-        '<h2>' + esc(p.title) + '</h2>' +
-        (p.excerpt ? '<p>' + esc(p.excerpt) + '</p>' : '') +
-        (p.tags.length ? '<div class="tags">' + p.tags.map(function (t) {
-          return '<span class="tg' + (activeTag.toLowerCase() === t.toLowerCase() ? ' on' : '') + '" data-tag="' + esc(t) + '">#' + esc(t) + '</span>';
-        }).join('') + '</div>' : '') + '</a>';
-    }).join('');
+    listEl.innerHTML = view === 'tree' ? renderTree(shown, filtering) : shown.map(card).join('');
+  }
+  function renderScan() {
+    var top = Object.keys(T.dirs).filter(function (k) { return k.indexOf('/') < 0; }).length;
+    var when = new Date(T.t).toLocaleTimeString('vi-VN');
+    scanEl.innerHTML = 'đã quét <b>' + T.total + '</b> file · <b>' + T.items.length + '</b> bài .md · <b>' + top + '</b> thư mục cấp 1 · lúc ' + esc(when) +
+      (T.truncated ? ' · <span style="color:#d29922">danh sách GitHub bị cắt bớt</span>' : '') +
+      ' · push xong mà chưa thấy? bấm “quét lại”';
+    scanEl.hidden = false;
   }
   function setTag(t) {
     activeTag = (activeTag.toLowerCase() === String(t).toLowerCase()) ? '' : t;
@@ -132,21 +196,26 @@
   tagbar.addEventListener('click', onTagClick);
   listEl.addEventListener('click', onTagClick);
   q.addEventListener('input', function () { syncUrl(); render(); });
+  $('v-tree').addEventListener('click', function () { view = 'tree'; syncUrl(); if (T) render(); });
+  $('v-list').addEventListener('click', function () { view = 'list'; syncUrl(); if (T) render(); });
+  $('refresh').addEventListener('click', function () { POSTS.clearCache(); location.reload(); });
 
-  POSTS.list().then(function (items) {
-    if (!items.length) {
+  POSTS.tree().then(function (t) {
+    T = t;
+    if (!t.total) {
       statusEl.className = '';
-      statusEl.innerHTML = '<div class="empty">total 0<br>Tạo thư mục <code>posts/</code>, thêm file <code>.md</code> (hoặc thư mục con chứa <code>.md</code> + ảnh) rồi push lên.</div>';
+      statusEl.innerHTML = '<div class="empty">total 0<br>Tạo thư mục <code>posts/</code>, thêm file <code>.md</code> (hoặc thư mục con chứa <code>writeup.md</code> + ảnh) rồi push lên.</div>';
       return;
     }
     // hiển thị ngay bằng tên file, sau đó bổ sung title/tags/ngày khi đọc xong
-    posts = items.map(function (it) {
+    posts = POSTS.sortPosts(t.items.map(function (it) {
       return Object.assign({ title: it.base.replace(/\.md$/i, '').replace(/[-_]+/g, ' '), date: '', tags: [], excerpt: '', mins: Math.max(1, Math.round(it.size / 1100)) }, it);
-    }).sort(function (a, b) { return a.path < b.path ? 1 : -1; });
-    statusEl.hidden = true; filterEl.hidden = false; listEl.hidden = false;
+    }));
+    statusEl.hidden = true; toolsEl.hidden = false; listEl.hidden = false;
+    renderScan();
     render();
-    return POSTS.loadAll().then(function (all) {
-      posts = all;
+    return POSTS.pool(t.items, 6, POSTS.meta).then(function (all) {
+      posts = POSTS.sortPosts(all);
       renderTags();
       render();
     });
