@@ -137,6 +137,16 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
 @keyframes relIn{to{opacity:1;transform:none}}
 @keyframes shimmer{to{background-position:-200% 0}}
 @media(max-width:760px){.related-grid{grid-template-columns:1fr}.rel-skel{height:110px}}
+.markdown-body .katex{font-size:1.1em}
+.markdown-body .math{max-width:100%}
+.math-block{position:relative}
+.math-copy{position:absolute;top:2px;right:2px;z-index:2;opacity:0;background:#21262d;border:1px solid var(--border);color:var(--muted);font-family:var(--font-mono);font-size:.7rem;padding:.1rem .45rem;border-radius:6px;cursor:pointer;transition:opacity .15s}
+.math-block:hover .math-copy,.math-copy:focus-visible,.math-copy.copied{opacity:1}
+.math-copy:hover,.math-copy.copied{color:var(--ok);border-color:var(--ok)}
+@media(hover:none){.math-copy{opacity:.6}}
+.math-error{font-family:var(--font-mono);font-size:.85em;color:var(--bad);background:rgba(248,81,73,.08);border:1px dashed rgba(248,81,73,.5);border-radius:6px;padding:.1em .4em;white-space:pre-wrap;overflow-wrap:anywhere;text-align:left!important}
+.markdown-body .math-error[data-d="1"]{padding:.6rem .8rem}
+@media(max-width:560px){.markdown-body .katex{font-size:1em}}
 </style>
 </head>
 <body>
@@ -214,6 +224,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.4/purify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/mhchem.min.js"></script>
 <script src="posts.js"></script>
 <script>
 (function () {
@@ -402,12 +413,29 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     return '<span class="math" data-i="' + (mathStore.length - 1) + '"' + (display ? ' data-d="1"' : '') + '></span>';
   };
 
+  /* Tìm dấu $ đóng của công thức inline (src bắt đầu bằng '$'). Quét tuyến tính, không regex → không bị treo với '$' lẻ.
+     Quy tắc như Pandoc/GitHub: sau '$' mở không là khoảng trắng; trước '$' đóng không là khoảng trắng; sau '$' đóng không là chữ số ("$5 và $10" vẫn là tiền). */
+  function scanInlineMath(src) {
+    const n = Math.min(src.length, 3000);
+    if (n < 3 || /\s/.test(src.charAt(1)) || src.charAt(1) === '$') return -1;
+    for (let i = 1; i < n; i++) {
+      const c = src.charAt(i);
+      if (c === '\\') { i++; continue; }
+      if (c === '\n' && /^\n[ \t]*\n/.test(src.slice(i, i + 40))) return -1; // hết đoạn
+      if (c === '$') {
+        if (/\s/.test(src.charAt(i - 1)) || /\d/.test(src.charAt(i + 1))) return -1;
+        return i;
+      }
+    }
+    return -1;
+  }
+
   marked.use({
     gfm: true, breaks: false,
     renderer: {
       heading({ tokens, depth }) {
         const html = this.parser.parseInline(tokens);
-        const base = githubSlug(htmlToText(html)) || 'section';
+        const base = githubSlug(htmlToText(html.replace(/<span class="math" data-i="(\d+)"[^>]*><\/span>/g, (m, i) => ' ' + (mathStore[+i] || '') + ' '))) || 'section';
         const n = (headingIds.get(base) || 0) + 1;
         headingIds.set(base, n);
         const id = n === 1 ? base : base + '-' + n;
@@ -429,6 +457,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       },
       code({ text, lang }) {
         const label = String(lang || '').trim().split(/\s+/)[0];
+        if (label.toLowerCase() === 'math') return mathPH(text, true) + '\n'; // ```math như GitHub
         const r = resolveLang(label);
         let html;
         try {
@@ -440,24 +469,40 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     },
     extensions: [
       {
+        // $$ ... $$  |  \[ ... \]  |  \begin{align} ... \end{align} (equation, gather, cases, pmatrix, …) đứng riêng một dòng
         name: 'mathBlock', level: 'block',
-        start(s) { const i = s.search(/\$\$|\\\[/); return i < 0 ? undefined : i; },
+        start(s) {
+          const m = /(^|\n)[ \t]{0,3}(?:\$\$|\\\[|\\begin\{(?:equation|align|alignat|gather|aligned|gathered|cases|array|[pbBvV]?matrix)\*?\})/.exec(s);
+          return m ? m.index + m[1].length : undefined;
+        },
         tokenizer(src) {
-          const m = /^(?:\$\$\n?([\s\S]+?)\n?\$\$|\\\[\n?([\s\S]+?)\n?\\\])[ \t]*(?:\n|$)/.exec(src);
+          let m = /^[ \t]{0,3}(?:\$\$[ \t]*\n?([\s\S]+?)\n?[ \t]*\$\$|\\\[[ \t]*\n?([\s\S]+?)\n?[ \t]*\\\])[ \t]*(?:\n|$)/.exec(src);
           if (m) return { type: 'mathBlock', raw: m[0], text: (m[1] || m[2]).trim() };
+          m = /^[ \t]{0,3}(\\begin\{(equation|align|alignat|gather|aligned|gathered|cases|array|[pbBvV]?matrix)(\*?)\}[\s\S]+?\\end\{\2\3\})[ \t]*(?:\n|$)/.exec(src);
+          if (m) return { type: 'mathBlock', raw: m[0], text: m[1].trim() };
         },
         renderer(t) { return mathPH(t.text, true) + '\n'; }
       },
       {
+        // $...$  |  \(...\)  |  $$...$$ (display ngay giữa đoạn)
         name: 'mathInline', level: 'inline',
         start(s) { const i = s.search(/\$|\\\(/); return i < 0 ? undefined : i; },
         tokenizer(src) {
-          let m = /^\$\$([^\n]+?)\$\$/.exec(src);
-          if (m) return { type: 'mathInline', raw: m[0], text: m[1].trim(), display: true };
-          // $...$: không khoảng trắng sát dấu, không phải số tiền ($5, $10)
-          // (không dùng lookbehind để chạy được trên Safari cũ)
-          m = /^\\\((.+?)\\\)/.exec(src) || /^\$(?![\s$])((?:\\.|[^$\\\n\s]|[^$\\\n\s][^$\\\n]*?[^$\\\n\s])+?)\$(?!\d)/.exec(src);
-          if (m) return { type: 'mathInline', raw: m[0], text: m[1] };
+          if (src.charAt(0) === '$') {
+            if (src.charAt(1) === '$') {
+              const end = src.indexOf('$$', 2);
+              if (end > 2 && end < 4000) {
+                const inner = src.slice(2, end);
+                if (inner.indexOf('\n\n') < 0) return { type: 'mathInline', raw: src.slice(0, end + 2), text: inner.trim(), display: true };
+              }
+              return;
+            }
+            const end = scanInlineMath(src);
+            if (end > 0) return { type: 'mathInline', raw: src.slice(0, end + 1), text: src.slice(1, end).trim() };
+            return;
+          }
+          const m = /^\\\(([\s\S]+?)\\\)/.exec(src);
+          if (m && m[1].indexOf('\n\n') < 0) return { type: 'mathInline', raw: m[0], text: m[1].trim() };
         },
         renderer(t) { return mathPH(t.text, !!t.display); }
       }
@@ -521,14 +566,47 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       bq.replaceWith(box);
     });
   }
+  /* Macro tiện dụng cho mọi bài (có thể tự thêm bằng \gdef trong công thức: $$\gdef\foo{...}$$ — định nghĩa dùng được ở các công thức sau) */
+  const TEX_MACROS = {
+    '\\R': '\\mathbb{R}', '\\N': '\\mathbb{N}', '\\Z': '\\mathbb{Z}', '\\Q': '\\mathbb{Q}', '\\C': '\\mathbb{C}', '\\F': '\\mathbb{F}',
+    '\\abs': '\\left|#1\\right|', '\\norm': '\\left\\|#1\\right\\|',
+    '\\floor': '\\left\\lfloor #1\\right\\rfloor', '\\ceil': '\\left\\lceil #1\\right\\rceil',
+    '\\set': '\\left\\{#1\\right\\}', '\\bigO': '\\mathcal{O}\\left(#1\\right)',
+    '\\xor': '\\oplus', '\\lsh': '\\ll', '\\rsh': '\\gg', '\\hex': '\\texttt{0x#1}', '\\E': '\\mathbb{E}'
+  };
   function renderMath() {
     contentEl.querySelectorAll('.math[data-i]').forEach(el => {
-      const tex = mathStore[+el.dataset.i];
-      if (tex == null) return;
+      const raw = mathStore[+el.dataset.i];
+      if (raw == null) return;
+      const display = el.dataset.d === '1';
+      const tex = String(raw).replace(/\\label\{[^}]*\}/g, ''); // KaTeX không hỗ trợ \label
       try {
-        if (typeof katex === 'undefined') throw 0;
-        katex.render(tex, el, { displayMode: el.dataset.d === '1', throwOnError: false });
-      } catch (e) { el.textContent = tex; }
+        if (typeof katex === 'undefined') throw new Error('KaTeX chưa tải được (mạng hoặc trình chặn quảng cáo).');
+        katex.render(tex, el, {
+          displayMode: display, throwOnError: true, strict: 'ignore', trust: false,
+          macros: TEX_MACROS, maxExpand: 1000, errorColor: '#f85149'
+        });
+      } catch (e) {
+        // lỗi cú pháp: hiện nguyên mã TeX (viền đỏ) + lý do khi rê chuột, thay vì hỏng cả bài
+        el.classList.add('math-error');
+        el.textContent = display ? '$$\n' + tex + '\n$$' : '$' + tex + '$';
+        el.title = String((e && e.message) || e).replace(/^KaTeX parse error:\s*/, 'Lỗi LaTeX: ');
+        return;
+      }
+      // công thức display: nút "TeX" để copy mã nguồn
+      const p = el.parentElement;
+      if (display && p && p.tagName !== 'P') {
+        const wrap = document.createElement('div');
+        wrap.className = 'math-block';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'math-copy';
+        btn.textContent = 'TeX';
+        btn.title = 'Copy mã LaTeX';
+        btn.addEventListener('click', () => copyWithFeedback(btn, 'TeX', tex));
+        el.replaceWith(wrap);
+        wrap.append(el, btn);
+      }
     });
   }
 
@@ -561,12 +639,23 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       });
     });
   }
-  /* Cho phép ảnh có dấu cách / ![[ảnh.png]] kiểu Obsidian / đường dẫn Windows */
+  /* Tiền xử lý Markdown: ảnh có dấu cách / ![[ảnh.png]] kiểu Obsidian / đường dẫn Windows.
+     Code và công thức được "giữ chỗ" trước để không bị sửa nhầm (vd. [0,1](a b) trong công thức). */
   function preprocessMarkdown(md) {
-    return md
+    const stash = [];
+    const hold = m => { stash.push(m); return '\u0000' + (stash.length - 1) + '\u0000'; };
+    let t = md
+      .replace(/```[\s\S]*?```|~~~[\s\S]*?~~~/g, hold)
+      .replace(/`[^`\n]*`/g, hold)
+      .replace(/\$\$[\s\S]*?\$\$/g, hold)
+      .replace(/\\\[[\s\S]*?\\\]/g, hold)
+      .replace(/\\\([\s\S]*?\\\)/g, hold)
+      .replace(/\$(?![\s$])[^$\n]*[^\s$\\]\$(?!\d)/g, hold);
+    t = t
       .replace(/!\[\[([^\]|]+?)(?:\|[^\]]*)?\]\]/g, (m, n) => '![' + n.trim() + '](<' + n.trim() + '>)')
       .replace(/(!?\[[^\]]*\]\()([^)<>"\n]*[ ][^)<>"\n]*?)(\))/g, (m, a, b, c) => /^\s*(https?:|#|mailto:)/i.test(b) ? m : a + '<' + b.trim().replace(/\\/g, '/') + '>' + c)
       .replace(/(!\[[^\]]*\]\()<?([^)<>"\n]*\\[^)<>"\n]*)>?(\))/g, (m, a, b, c) => a + '<' + b.replace(/\\/g, '/') + '>' + c);
+    return t.replace(/\u0000(\d+)\u0000/g, (m, i) => stash[+i]);
   }
 
   /* ---------- Copy / chia sẻ / điều hướng mục ---------- */
