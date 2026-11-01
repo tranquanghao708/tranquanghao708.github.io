@@ -66,41 +66,36 @@
 </div>
 <script src="ll.js"></script>
 <script src="site.js"></script>
+<script src="posts.js"></script>
 <script>
 (function () {
   'use strict';
   LL.type(document.getElementById('term'));
-  var S = window.SITE, esc = S.esc, $ = function (id) { return document.getElementById(id); };
-  var NAME = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,120}\.md$/, strip = function (v) { return v.trim().replace(/^["']|["']$/g, ''); };
+  var $ = function (id) { return document.getElementById(id); }, esc = POSTS.esc;
 
-  function info(text, name) {
-    var o = { name: name, title: name.replace(/\.md$/i, '').replace(/[-_]+/g, ' '), tags: [] };
-    var fm = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/), body = fm ? text.slice(fm[0].length) : text;
-    var ti = fm && fm[1].match(/^title\s*:\s*(.+)$/m), tg = fm && fm[1].match(/^tags?\s*:\s*\[?(.*?)\]?\s*$/m), h1 = body.match(/^#\s+(.+)$/m);
-    if (ti) o.title = strip(ti[1]); else if (h1) o.title = h1[1].trim();
-    if (tg) o.tags = tg[1].split(',').map(strip).filter(Boolean);
-    return o;
-  }
+  POSTS.loadAll().then(function (list) {
+    if (!list.length) { $('recent').innerHTML = '<a>(chưa có bài)</a>'; return; }
+    $('recent').innerHTML = list.slice(0, 5).map(function (p) {
+      return '<a href="' + esc(p.href) + '">' + esc(p.title) + '</a>';
+    }).join('');
 
-  fetch('https://api.github.com/repos/' + S.user + '/' + S.repo + '/contents/posts?ref=main', { headers: { Accept: 'application/vnd.github+json' } })
-    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(function (files) {
-      var names = files.filter(function (f) { return f.type === 'file' && NAME.test(f.name); }).map(function (f) { return f.name; }).sort().reverse().slice(0, 8);
-      if (!names.length) { $('recent').innerHTML = '<a>(chưa có bài)</a>'; return; }
-      return Promise.all(names.map(function (n) {
-        return fetch('posts/' + encodeURIComponent(n)).then(function (r) { return r.ok ? r.text() : ''; }).catch(function () { return ''; })
-          .then(function (t) { return info(t, n); });
-      })).then(function (list) {
-        $('recent').innerHTML = list.slice(0, 5).map(function (p) {
-          return '<a href="post.html?file=' + encodeURIComponent(p.name) + '">' + esc(p.title) + '</a>';
-        }).join('');
-        var cnt = {};
-        list.forEach(function (p) { p.tags.forEach(function (t) { cnt[t] = (cnt[t] || 0) + 1; }); });
-        var tags = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; }).slice(0, 12);
-        if (tags.length) { $('chips').innerHTML = tags.map(function (t) { return '<span>' + esc(t) + '</span>'; }).join(''); $('chips-box').hidden = false; }
-      });
-    })
-    .catch(function () { $('recent').innerHTML = '<a href="notes.html">xem danh sách ghi chú</a>'; });
+    var cnt = {}, label = {};
+    list.forEach(function (p) { p.tags.forEach(function (t) { var k = t.toLowerCase(); cnt[k] = (cnt[k] || 0) + 1; label[k] = label[k] || t; }); });
+    var keys = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; }).slice(0, 12);
+    if (keys.length) {
+      $('chips').innerHTML = keys.map(function (k) {
+        return '<span data-tag="' + esc(label[k]) + '" style="cursor:pointer" role="link" tabindex="0">' + esc(label[k]) + '</span>';
+      }).join('');
+      $('chips-box').hidden = false;
+      var go = function (e) {
+        var el = e.target.closest('[data-tag]');
+        if (!el || (e.type === 'keydown' && e.key !== 'Enter')) return;
+        location.href = 'notes.html?tag=' + encodeURIComponent(el.getAttribute('data-tag'));
+      };
+      $('chips').addEventListener('click', go);
+      $('chips').addEventListener('keydown', go);
+    }
+  }).catch(function () { $('recent').innerHTML = '<a href="notes.html">xem danh sách ghi chú</a>'; });
 })();
 </script>
 </body>
