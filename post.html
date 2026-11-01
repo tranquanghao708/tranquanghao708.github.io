@@ -220,7 +220,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   'use strict';
 
   /*
-   * CẤU TRÚC BÀI VIẾT TRONG posts/ (mọi file .md, tối đa 3 cấp thư mục)
+   * CẤU TRÚC BÀI VIẾT TRONG posts/ (mọi file .md, tối đa 6 cấp thư mục, tên có dấu cách/tiếng Việt vẫn được)
    *   posts/ten-bai.md                      → ?file=ten-bai.md
    *   posts/folder1/writeup.md              → ?file=folder1/writeup.md
    *   posts/folder1/image/anh1.png          → trong writeup.md: ![mô tả](image/anh1.png)
@@ -246,9 +246,10 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   const DISCUSSIONS_URL = 'https://github.com/' + GISCUS.repo + '/discussions';
   const MAX_MD_BYTES = 5 * 1024 * 1024;
   const ALLOWED_MD_HOSTS = new Set(['raw.githubusercontent.com', 'gist.githubusercontent.com']);
-  const SEG = '[a-zA-Z0-9][a-zA-Z0-9._-]{0,80}';
-  const SAFE_SLUG_RE = new RegExp('^' + SEG + '$');
-  const SAFE_PATH_RE = new RegExp('^' + SEG + '(?:/' + SEG + '){0,3}\\.md$');
+  // Tên file/thư mục được phép có dấu cách, tiếng Việt, hoa/thường; chặn '..', ký tự điều khiển, '\\', tên bắt đầu bằng '.'
+  const validSeg = s => typeof s === 'string' && s.length > 0 && s.length <= 120 && !/[\u0000-\u001f\u007f\\]/.test(s) && s.charAt(0) !== '.';
+  const SAFE_SLUG_RE = { test: s => validSeg(s) };
+  const SAFE_PATH_RE = { test: p => typeof p === 'string' && p.length <= 400 && /\.md$/i.test(p) && p.split('/').length <= 6 && p.split('/').every(validSeg) };
   const FOLDER_INDEX_RE = /^([^/]+)\/(?:index|readme)\.md$/i;
   const SITE_BASE = new URL('.', location.href);
   const POSTS_URL = new URL('posts/', SITE_BASE).href;
@@ -968,7 +969,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
         }
         if (!got) throw new Error(folderSlug && !candidates.includes(fileRaw)
           ? 'Không tìm thấy file .md nào trong posts/' + folderSlug + '/'
-          : 'Không tìm thấy posts/' + candidates[0]);
+          : 'Không tìm thấy posts/' + candidates[0] + ' (tên file/thư mục phân biệt HOA/thường).');
         mdText = got.text;
         sourceLabel = file + ' · ' + got.source;
       }
