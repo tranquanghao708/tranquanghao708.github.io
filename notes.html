@@ -8,9 +8,16 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%AC%A1%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="ll.css">
 <style>
-.filter{display:flex;align-items:center;gap:.5rem;font-family:var(--mono);font-size:.85rem;margin-bottom:1.2rem;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:.5rem .8rem}
+[hidden]{display:none!important}
+.filter{display:flex;align-items:center;gap:.5rem;font-family:var(--mono);font-size:.85rem;margin-bottom:.9rem;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:.5rem .8rem}
 .filter span{color:var(--green);white-space:nowrap}
 .filter input{flex:1;background:none;border:0;outline:0;color:var(--text);font:inherit;min-width:0}
+.tagbar{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.1rem}
+.tagbtn,.tg{font-family:var(--mono);font-size:.74rem;color:var(--accent);background:rgba(56,139,253,.12);border:1px solid rgba(56,139,253,.35);border-radius:999px;padding:.15rem .6rem;cursor:pointer;line-height:1.5}
+.tagbtn:hover,.tg:hover{background:rgba(56,139,253,.25);border-color:var(--accent)}
+.tagbtn.on,.tg.on{background:var(--accent);color:#0d1117;border-color:var(--accent)}
+.tagbtn small{opacity:.7;margin-left:.25rem}
+.count{font-family:var(--mono);font-size:.78rem;color:var(--dim);margin-bottom:.8rem}
 .status{text-align:center;padding:2.5rem 1rem;color:var(--dim);font-family:var(--mono);font-size:.9rem}
 .status.error{color:var(--red)}
 .post-list{display:grid;gap:.8rem}
@@ -18,9 +25,11 @@
 .post-card:hover{border-color:var(--accent);transform:translateX(3px);box-shadow:0 0 18px rgba(88,166,255,.12)}
 .post-meta{font-family:var(--mono);font-size:.75rem;color:var(--dim);margin-bottom:.3rem;display:flex;gap:.9rem;flex-wrap:wrap}
 .post-meta .perm{color:var(--green)}
+.post-meta .path{overflow-wrap:anywhere}
 .post-card h2{font-size:1.05rem;color:#fff;font-weight:600;line-height:1.35}
 .post-card h2::before{content:"> ";color:var(--green);font-family:var(--mono)}
-.post-card p{font-size:.85rem;color:var(--muted)}
+.post-card p{font-size:.85rem;color:var(--muted);margin-top:.3rem}
+.post-card .tags{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.55rem}
 .empty{border:1px dashed var(--border);border-radius:var(--r);padding:2.2rem 1.5rem;text-align:center;color:var(--dim)}
 .empty code{font-family:var(--mono);color:var(--accent)}
 </style>
@@ -39,11 +48,13 @@
   </div>
 
   <h1>Ghi chú &amp; Writeup</h1>
-  <p class="subtitle">$ ls -la posts/</p>
-  <p class="tagline" style="margin-bottom:1.6rem">Tự động lấy từ thư mục <code style="font-family:var(--mono);color:var(--accent)">posts/</code> trong repo. Thả file <code style="font-family:var(--mono);color:var(--accent)">.md</code> vào là hiện.</p>
+  <p class="subtitle">$ find posts/ -name "*.md"</p>
+  <p class="tagline" style="margin-bottom:1.6rem">Tự động quét thư mục <code style="font-family:var(--mono);color:var(--accent)">posts/</code> (kể cả thư mục con). Mỗi bài có thể nằm trong một thư mục riêng cùng ảnh của nó, gắn <code style="font-family:var(--mono);color:var(--accent)">tags</code> trong frontmatter để lọc.</p>
 
-  <label class="filter" id="filter" hidden><span>$ grep -i</span><input id="q" type="search" placeholder="từ khoá…" autocomplete="off" spellcheck="false" aria-label="Lọc bài viết"></label>
-  <div id="status" class="status" role="status">Đang đọc thư mục posts/<span class="cur"></span></div>
+  <label class="filter" id="filter" hidden><span>$ grep -i</span><input id="q" type="search" placeholder="từ khoá, tên file, tag…" autocomplete="off" spellcheck="false" aria-label="Lọc bài viết"></label>
+  <div class="tagbar" id="tagbar" hidden></div>
+  <div class="count" id="count" hidden></div>
+  <div id="status" class="status" role="status">Đang quét thư mục posts/<span class="cur"></span></div>
   <div id="post-list" class="post-list" hidden></div>
 
   <footer>
@@ -52,63 +63,99 @@
   </footer>
 </div>
 <script src="ll.js"></script>
+<script src="posts.js"></script>
 <script>
 (function () {
   'use strict';
-  const CONFIG = { owner: 'tranquanghao708', repo: 'tranquanghao708.github.io', path: 'posts', branch: 'main', timeoutMs: 15000 };
-  const $ = id => document.getElementById(id);
-  const statusEl = $('status'), listEl = $('post-list'), filterEl = $('filter'), q = $('q');
-  let posts = [];
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = POSTS.esc;
+  var statusEl = $('status'), listEl = $('post-list'), filterEl = $('filter'), q = $('q'), tagbar = $('tagbar'), countEl = $('count');
+  var posts = [], activeTag = '';
+  var params = new URLSearchParams(location.search);
+  activeTag = (params.get('tag') || '').trim().replace(/^#/, '');
+  q.value = params.get('q') || '';
 
-  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  const toTitle = n => n.replace(/\.md$/i, '').replace(/[-_]+/g, ' ').replace(/(^|\s)\S/g, c => c.toUpperCase());
-  const fmtSize = b => b < 1024 ? b + 'B' : (b / 1024).toFixed(1) + 'K';
+  var fmtSize = function (b) { return b < 1024 ? b + 'B' : (b / 1024).toFixed(1) + 'K'; };
+  function syncUrl() {
+    var u = new URL(location.href);
+    u.search = '';
+    if (activeTag) u.searchParams.set('tag', activeTag);
+    if (q.value.trim()) u.searchParams.set('q', q.value.trim());
+    history.replaceState(null, '', u.pathname + u.search);
+  }
+  function hasTag(p, t) { return p.tags.some(function (x) { return x.toLowerCase() === t.toLowerCase(); }); }
 
+  function renderTags() {
+    var cnt = {}, label = {};
+    posts.forEach(function (p) { p.tags.forEach(function (t) { var k = t.toLowerCase(); cnt[k] = (cnt[k] || 0) + 1; label[k] = label[k] || t; }); });
+    var keys = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a] || (a < b ? -1 : 1); });
+    if (!keys.length) { tagbar.hidden = true; return; }
+    tagbar.innerHTML = keys.map(function (k) {
+      return '<button type="button" class="tagbtn' + (activeTag.toLowerCase() === k ? ' on' : '') + '" data-tag="' + esc(label[k]) + '">#' + esc(label[k]) + '<small>' + cnt[k] + '</small></button>';
+    }).join('');
+    tagbar.hidden = false;
+  }
   function render() {
-    const kw = q.value.trim().toLowerCase();
-    const shown = posts.filter(p => !kw || p.name.toLowerCase().includes(kw) || p.title.toLowerCase().includes(kw));
+    var kw = q.value.trim().toLowerCase();
+    var shown = posts.filter(function (p) {
+      if (activeTag && !hasTag(p, activeTag)) return false;
+      if (!kw) return true;
+      return (p.path + ' ' + p.title + ' ' + p.excerpt + ' ' + p.tags.join(' ')).toLowerCase().indexOf(kw) >= 0;
+    });
+    countEl.hidden = false;
+    countEl.textContent = shown.length + ' / ' + posts.length + ' bài' + (activeTag ? ' · tag: #' + activeTag : '');
     if (!shown.length) {
-      listEl.innerHTML = '<div class="empty">grep: không có kết quả cho "' + esc(q.value) + '"</div>';
+      listEl.innerHTML = '<div class="empty">grep: không có kết quả' + (activeTag ? ' cho tag "' + esc(activeTag) + '"' : '') + '</div>';
       return;
     }
-    listEl.innerHTML = shown.map(p =>
-      '<a class="post-card" href="post.html?file=' + encodeURIComponent(p.name) + '">' +
-      '<div class="post-meta"><span class="perm">-rw-r--r--</span><span>' + fmtSize(p.size) + '</span><span>' + esc(p.name) + '</span></div>' +
-      '<h2>' + esc(p.title) + '</h2></a>').join('');
+    listEl.innerHTML = shown.map(function (p) {
+      return '<a class="post-card" href="' + esc(p.href) + '">' +
+        '<div class="post-meta"><span class="perm">' + (p.folder ? 'drwxr-xr-x' : '-rw-r--r--') + '</span><span>' + fmtSize(p.size) + '</span>' +
+        (p.date ? '<span>' + esc(p.date) + '</span>' : '') + '<span class="path">' + esc(p.path) + '</span><span>~' + p.mins + ' phút</span></div>' +
+        '<h2>' + esc(p.title) + '</h2>' +
+        (p.excerpt ? '<p>' + esc(p.excerpt) + '</p>' : '') +
+        (p.tags.length ? '<div class="tags">' + p.tags.map(function (t) {
+          return '<span class="tg' + (activeTag.toLowerCase() === t.toLowerCase() ? ' on' : '') + '" data-tag="' + esc(t) + '">#' + esc(t) + '</span>';
+        }).join('') + '</div>' : '') + '</a>';
+    }).join('');
   }
+  function setTag(t) {
+    activeTag = (activeTag.toLowerCase() === String(t).toLowerCase()) ? '' : t;
+    syncUrl(); renderTags(); render();
+  }
+  function onTagClick(e) {
+    var el = e.target.closest('[data-tag]');
+    if (!el) return;
+    e.preventDefault();
+    setTag(el.getAttribute('data-tag'));
+  }
+  tagbar.addEventListener('click', onTagClick);
+  listEl.addEventListener('click', onTagClick);
+  q.addEventListener('input', function () { syncUrl(); render(); });
 
-  async function load() {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), CONFIG.timeoutMs);
-    try {
-      const res = await fetch('https://api.github.com/repos/' + CONFIG.owner + '/' + CONFIG.repo + '/contents/' + CONFIG.path + '?ref=' + CONFIG.branch,
-        { cache: 'no-store', signal: ctrl.signal, headers: { Accept: 'application/vnd.github+json' } });
-      if (res.status === 404) throw new Error('Không tìm thấy thư mục "' + CONFIG.path + '/" hoặc sai tên repo.');
-      if (res.status === 403 || res.status === 429) throw new Error('GitHub API bị giới hạn (rate limit). Thử lại sau vài phút.');
-      if (!res.ok) throw new Error('Lỗi API: ' + res.status);
-      const files = await res.json();
-      posts = (Array.isArray(files) ? files : [])
-        .filter(f => f.type === 'file' && /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,120}\.md$/.test(f.name))
-        .map(f => ({ name: f.name, size: f.size || 0, title: toTitle(f.name) }))
-        .sort((a, b) => b.name.localeCompare(a.name));
-
-      if (!posts.length) {
-        statusEl.className = '';
-        statusEl.innerHTML = '<div class="empty">total 0<br>Tạo thư mục <code>posts/</code>, thêm file <code>.md</code> rồi push lên.</div>';
-        return;
-      }
-      statusEl.hidden = true;
-      filterEl.hidden = false;
-      listEl.hidden = false;
+  POSTS.list().then(function (items) {
+    if (!items.length) {
+      statusEl.className = '';
+      statusEl.innerHTML = '<div class="empty">total 0<br>Tạo thư mục <code>posts/</code>, thêm file <code>.md</code> (hoặc thư mục con chứa <code>.md</code> + ảnh) rồi push lên.</div>';
+      return;
+    }
+    // hiển thị ngay bằng tên file, sau đó bổ sung title/tags/ngày khi đọc xong
+    posts = items.map(function (it) {
+      return Object.assign({ title: it.base.replace(/\.md$/i, '').replace(/[-_]+/g, ' '), date: '', tags: [], excerpt: '', mins: Math.max(1, Math.round(it.size / 1100)) }, it);
+    }).sort(function (a, b) { return a.path < b.path ? 1 : -1; });
+    statusEl.hidden = true; filterEl.hidden = false; listEl.hidden = false;
+    render();
+    return POSTS.loadAll().then(function (all) {
+      posts = all;
+      renderTags();
       render();
-      q.addEventListener('input', render);
-    } catch (err) {
-      statusEl.className = 'status error';
-      statusEl.textContent = 'Lỗi: ' + (err.name === 'AbortError' ? 'hết thời gian chờ.' : err.message);
-      console.error(err);
-    } finally { clearTimeout(timer); }
-  }
-  load();
+    });
+  }).catch(function (err) {
+    statusEl.hidden = false;
+    statusEl.className = 'status error';
+    statusEl.textContent = 'Lỗi: ' + err.message;
+    console.error(err);
+  });
 })();
 </script>
 </body>
