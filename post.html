@@ -214,22 +214,18 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.4/purify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
+<script src="posts.js"></script>
 <script>
 (function () {
   'use strict';
 
   /*
-   * CẤU TRÚC BÀI VIẾT TRONG posts/
-   *   posts/ten-bai.md                       → ?file=ten-bai.md
-   *   posts/ten-writeup/index.md             → ?post=ten-writeup   (hoặc README.md)
-   *   posts/ten-writeup/images/anh1.png      → trong index.md viết: ![mô tả](images/anh1.png)
-   *
-   * FRONTMATTER (tuỳ chọn):
-   *   ---
-   *   title: Tên bài
-   *   date: 2026-11-01
-   *   tags: [pwn, kernel, reverse-engineering]
-   *   ---
+   * CẤU TRÚC BÀI VIẾT TRONG posts/ (mọi file .md, tối đa 3 cấp thư mục)
+   *   posts/ten-bai.md                      → ?file=ten-bai.md
+   *   posts/folder1/writeup.md              → ?file=folder1/writeup.md
+   *   posts/folder1/image/anh1.png          → trong writeup.md: ![mô tả](image/anh1.png)
+   *   ?post=folder1                         → tự chọn file chính trong thư mục (index/README/<tên>/writeup/…)
+   * Ảnh tìm trong image/ images/ img/ assets/ nếu bạn đặt tên khác với đường dẫn đã viết.
    */
   const CONFIG = {
     owner: 'tranquanghao708',
@@ -520,20 +516,41 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     });
   }
 
-  /* Ảnh trong thư mục bài: nếu bản trên site chưa deploy → tự thử raw.githubusercontent; click để mở ảnh gốc */
+  /* Ảnh: thử lần lượt (thư mục khác tên image/images/img/assets) × (site, raw GitHub); click để mở ảnh gốc */
+  const IMG_DIRS = ['image', 'images', 'img', 'assets', 'Images', 'Image'];
   function setupImages() {
     contentEl.querySelectorAll('img').forEach(img => {
+      let queue = null;
       img.addEventListener('error', () => {
-        if (img.dataset.fb) return;
-        img.dataset.fb = '1';
-        const s = img.currentSrc || img.src;
-        if (s.startsWith(POSTS_URL)) img.src = RAW_POSTS + s.slice(POSTS_URL.length).split('?')[0];
+        if (queue === null) {
+          queue = [];
+          const s = img.currentSrc || img.src;
+          if (s.startsWith(POSTS_URL)) {
+            const parts = s.slice(POSTS_URL.length).split('?')[0].split('/');
+            const name = parts.pop(), dir = parts.length ? parts[parts.length - 1] : '';
+            const base = parts.slice(0, -1).join('/');
+            const dirs = IMG_DIRS.indexOf(dir) >= 0 ? [dir].concat(IMG_DIRS.filter(d => d !== dir)) : null;
+            const add = u => { if (u !== s && queue.indexOf(u) < 0) queue.push(u); };
+            if (dirs) {
+              dirs.forEach(d => { const rel = (base ? base + '/' : '') + d + '/' + name; add(POSTS_URL + rel); add(RAW_POSTS + rel); });
+            } else add(RAW_POSTS + parts.concat(name).join('/'));
+          }
+        }
+        const next = queue.shift();
+        if (next) img.src = next;
       });
       img.addEventListener('click', () => {
         const s = img.currentSrc || img.src;
         if (/^(https?:|data:image\/)/i.test(s)) window.open(s, '_blank', 'noopener');
       });
     });
+  }
+  /* Cho phép ảnh có dấu cách / ![[ảnh.png]] kiểu Obsidian / đường dẫn Windows */
+  function preprocessMarkdown(md) {
+    return md
+      .replace(/!\[\[([^\]|]+?)(?:\|[^\]]*)?\]\]/g, (m, n) => '![' + n.trim() + '](<' + n.trim() + '>)')
+      .replace(/(!?\[[^\]]*\]\()([^)<>"\n]*[ ][^)<>"\n]*?)(\))/g, (m, a, b, c) => /^\s*(https?:|#|mailto:)/i.test(b) ? m : a + '<' + b.trim().replace(/\\/g, '/') + '>' + c)
+      .replace(/(!\[[^\]]*\]\()<?([^)<>"\n]*\\[^)<>"\n]*)>?(\))/g, (m, a, b, c) => a + '<' + b.replace(/\\/g, '/') + '>' + c);
   }
 
   /* ---------- Copy / chia sẻ / điều hướng mục ---------- */
@@ -821,119 +838,40 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
   /* ---------- Bài viết gợi ý (Đọc tiếp) ---------- */
   function initRelated() {
     const box = $('related'), grid = $('related-grid');
-    if (!box || !grid) return;
-    const WANT = 3, POOL = 9, LIST_KEY = 'posts_list_v2', LIST_TTL = 10 * 60 * 1000, MAX_SUMMARY_BYTES = 512 * 1024;
+    if (!box || !grid || !window.POSTS) return;
+    const WANT = 3, POOL = 9;
     let started = false;
-    const ss = {
-      get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
-      set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
-    };
-    const titleFromName = n => n.replace(/\.md$/i, '').replace(/[-_]+/g, ' ').replace(/(^|\s)\S/g, c => c.toUpperCase());
-    const plainText = md => String(md)
-      .replace(/```[\s\S]*?```/g, ' ').replace(/\$\$[\s\S]*?\$\$/g, ' ')
-      .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-      .replace(/<[^>]+>/g, ' ').replace(/[`*_~>#|]/g, '').replace(/\s+/g, ' ').trim();
-
-    function showSkeleton() {
-      grid.textContent = '';
-      for (let i = 0; i < WANT; i++) {
-        const d = document.createElement('div');
-        d.className = 'rel-skel';
-        grid.appendChild(d);
-      }
-      box.hidden = false;
-    }
-    // Liệt kê toàn bộ bài bằng 1 request (git trees): file .md ở gốc posts/ + thư mục có index.md / README.md
-    async function getList() {
-      try {
-        const c = JSON.parse(ss.get(LIST_KEY) || 'null');
-        if (c && Date.now() - c.t < LIST_TTL && Array.isArray(c.items)) return c.items;
-      } catch (e) {}
-      const res = await fetchWithTimeout('https://api.github.com/repos/' + CONFIG.owner + '/' + CONFIG.repo +
-        '/git/trees/' + CONFIG.branch + '?recursive=1', { headers: { Accept: 'application/vnd.github+json' } }, 10000);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      const flat = [], folders = new Map();
-      (Array.isArray(data.tree) ? data.tree : []).forEach(n => {
-        if (!n || n.type !== 'blob' || typeof n.path !== 'string' || !n.path.startsWith('posts/') || !/\.md$/i.test(n.path)) return;
-        const rel = n.path.slice(6), parts = rel.split('/');
-        if (parts.length === 1) {
-          if (SAFE_PATH_RE.test(rel)) flat.push({ id: rel, path: rel, query: 'file=' + encodeURIComponent(rel), size: n.size | 0 });
-        } else if (parts.length === 2 && SAFE_SLUG_RE.test(parts[0])) {
-          const b = parts[1].toLowerCase(), rank = b === 'index.md' ? 0 : b === 'readme.md' ? 1 : -1;
-          if (rank < 0 || !SAFE_PATH_RE.test(rel)) return;
-          const cur = folders.get(parts[0]);
-          if (!cur || rank < cur.rank) folders.set(parts[0], { id: parts[0], path: rel, query: 'post=' + encodeURIComponent(parts[0]), size: n.size | 0, rank, folder: true });
-        }
-      });
-      const items = flat.concat(Array.from(folders.values())).sort((a, b) => b.id.localeCompare(a.id));
-      ss.set(LIST_KEY, JSON.stringify({ t: Date.now(), items }));
-      return items;
-    }
-    // Lấy các bài kế tiếp theo vòng tròn (không gồm bài đang đọc)
-    function pick(items) {
-      const cur = folderSlug || file;
-      const idx = items.findIndex(p => p.id === cur);
-      if (idx < 0) return items.slice(0, POOL);
-      const out = [];
-      for (let k = 1; k < items.length && out.length < POOL; k++) out.push(items[(idx + k) % items.length]);
-      return out;
-    }
-    async function fetchSummaryText(p) {
-      for (const u of [POSTS_URL + encPath(p.path), RAW_POSTS + encPath(p.path)]) {
-        try {
-          const res = await fetchWithTimeout(u, {}, 8000);
-          if (!res.ok) continue;
-          if (parseInt(res.headers.get('content-length') || '0', 10) > MAX_SUMMARY_BYTES) return null;
-          const text = await res.text();
-          if (text.length > MAX_SUMMARY_BYTES || /^\s*<(!doctype|html)/i.test(text)) continue;
-          return text;
-        } catch (e) {}
-      }
-      return null;
-    }
-    async function summarize(p) {
-      const info = { id: p.id, query: p.query, title: titleFromName(p.id), excerpt: '', allTags: [], mins: Math.max(1, Math.round(p.size / 1100)), folder: !!p.folder };
-      const text = await fetchSummaryText(p);
-      if (!text) return info;
-      try {
-        const { meta, body } = parseFrontmatter(text);
-        const h1 = body.match(/^#\s+(.+?)\s*#*\s*$/m);
-        const t = plainText(meta.title || (h1 && h1[1]) || '').slice(0, 120);
-        if (t) info.title = t;
-        const para = body.split(/\n\s*\n/).map(x => x.trim())
-          .find(x => x && !/^(#|```|\||>|[-*+]\s|\d+\.\s|!\[|<|\$\$)/.test(x));
-        if (para) {
-          const ex = plainText(para);
-          info.excerpt = ex.length > 150 ? ex.slice(0, 147).trimEnd() + '…' : ex;
-        }
-        info.allTags = getTags(meta, 12);
-        info.mins = Math.max(1, Math.round(body.trim().split(/\s+/).length / 200));
-      } catch (e) { /* giữ thông tin dự phòng */ }
-      return info;
-    }
     function el(tag, cls, text) {
       const n = document.createElement(tag);
       if (cls) n.className = cls;
       if (text != null) n.textContent = text;
       return n;
     }
+    function showSkeleton() {
+      grid.textContent = '';
+      for (let i = 0; i < WANT; i++) grid.appendChild(el('div', 'rel-skel'));
+      box.hidden = false;
+    }
+    // các bài kế tiếp theo vòng tròn, không gồm bài đang đọc
+    function pick(items) {
+      const idx = items.findIndex(p => p.path === file);
+      if (idx < 0) return items.slice(0, POOL);
+      const out = [];
+      for (let k = 1; k < items.length && out.length < POOL; k++) out.push(items[(idx + k) % items.length]);
+      return out;
+    }
     function card(info, i, cur) {
       const a = el('a', 'rel-card');
-      const u = new URL(location.pathname, location.origin);
-      const q = info.query.split('=');
-      u.searchParams.set(q[0], decodeURIComponent(q[1]));
-      a.href = u.pathname + u.search;
+      a.href = info.href;
       a.style.setProperty('--i', i);
       a.setAttribute('aria-label', 'Đọc bài: ' + info.title);
       const meta = el('div', 'rel-meta');
-      meta.append(el('span', '', info.folder ? info.id + '/' : info.id), el('span', '', '~' + info.mins + ' phút'));
+      meta.append(el('span', '', info.path), el('span', '', '~' + info.mins + ' phút'));
       a.append(meta, el('div', 'rel-title', info.title));
       if (info.excerpt) a.append(el('p', 'rel-excerpt', info.excerpt));
-      const foot = el('div', 'rel-foot');
-      const tags = el('div', 'rel-tags');
-      const sorted = info.allTags.slice().sort((x, y) => cur.has(y.toLowerCase()) - cur.has(x.toLowerCase()));
-      sorted.slice(0, 3).forEach(t => tags.append(el('span', 'post-tag' + (cur.has(t.toLowerCase()) ? ' shared' : ''), '#' + t)));
+      const foot = el('div', 'rel-foot'), tags = el('div', 'rel-tags');
+      info.tags.slice().sort((x, y) => cur.has(y.toLowerCase()) - cur.has(x.toLowerCase())).slice(0, 3)
+        .forEach(t => tags.append(el('span', 'post-tag' + (cur.has(t.toLowerCase()) ? ' shared' : ''), '#' + t)));
       foot.append(tags, el('span', 'rel-go', 'Đọc tiếp →'));
       a.append(foot);
       return a;
@@ -943,20 +881,19 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       started = true;
       showSkeleton();
       try {
-        const chosen = pick(await getList());
+        const chosen = pick(await POSTS.list());
         if (!chosen.length) { box.hidden = true; return; }
-        const infos = await Promise.all(chosen.map(summarize));
+        const infos = await Promise.all(chosen.map(p => POSTS.meta(p)));
         const cur = new Set(currentTags.map(t => t.toLowerCase()));
-        infos.forEach((x, i) => { x.score = x.allTags.filter(t => cur.has(t.toLowerCase())).length; x.ord = i; });
+        infos.forEach((x, i) => { x.score = x.tags.filter(t => cur.has(t.toLowerCase())).length; x.ord = i; });
         infos.sort((a, b) => b.score - a.score || a.ord - b.ord); // ưu tiên bài chung tag
         grid.textContent = '';
         infos.slice(0, WANT).forEach((inf, i) => grid.appendChild(card(inf, i, cur)));
       } catch (e) {
         console.warn('[related]', e);
-        box.hidden = true; // lỗi thì ẩn êm, không làm hỏng trang
+        box.hidden = true;
       }
     }
-    // Chỉ tải khi người đọc gần cuối bài (tiết kiệm request / rate limit).
     const sentinel = $('share-tools');
     if ('IntersectionObserver' in window && sentinel) {
       const io = new IntersectionObserver(es => {
@@ -1023,17 +960,23 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
           got = await fetchPost(c);
           if (got) { file = c; break; }
         }
+        if (!got && folderSlug && !file && window.POSTS) {
+          try {
+            const main = POSTS.pickInFolder(await POSTS.list(), folderSlug);
+            if (main) { got = await fetchPost(main.path); if (got) file = main.path; }
+          } catch (e) { /* rơi xuống thông báo lỗi bên dưới */ }
+        }
         if (!got) throw new Error(folderSlug && !candidates.includes(fileRaw)
-          ? 'Không tìm thấy posts/' + folderSlug + '/index.md (hoặc README.md)'
+          ? 'Không tìm thấy file .md nào trong posts/' + folderSlug + '/'
           : 'Không tìm thấy posts/' + candidates[0]);
         mdText = got.text;
-        sourceLabel = (folderSlug ? folderSlug + '/' : file) + ' · ' + got.source;
+        sourceLabel = file + ' · ' + got.source;
       }
 
       const { meta, body } = parseFrontmatter(mdText);
       headingIds.clear();
       mathStore = [];
-      contentEl.innerHTML = sanitizeHtml(marked.parse(body, { async: false }));
+      contentEl.innerHTML = sanitizeHtml(marked.parse(preprocessMarkdown(body), { async: false }));
       contentEl.querySelectorAll('a[href^="http"]').forEach(a => {
         a.setAttribute('target', '_blank');
         a.setAttribute('rel', 'noopener noreferrer nofollow');
