@@ -333,6 +333,21 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
     else viewer.searchParams.set('file', target);
     return viewer;
   }
+  /* Đường dẫn ảnh viết kiểu "/image/a.png" hoặc "image\\a.png" → coi là tương đối so với thư mục chứa bài */
+  function fixImgPath(raw) {
+    let r = String(raw || '').trim().replace(/\\/g, '/');
+    if (!url && !/^(https?:|data:|mailto:|tel:|#)/i.test(r) && /^\/(?!\/)/.test(r)) r = r.replace(/^\/+/, '');
+    return r;
+  }
+  /* <img src="..."> viết thẳng bằng HTML trong .md: trình duyệt sẽ tính theo post.html (sai) → sửa lại theo thư mục bài */
+  function fixHtmlImages() {
+    contentEl.querySelectorAll('img').forEach(img => {
+      const raw = img.getAttribute('src') || '';
+      if (!raw || /^(https?:|data:image\/)/i.test(raw)) return;
+      const n = normalizeMarkdownHref(fixImgPath(raw));
+      if (n) img.setAttribute('src', n); else img.removeAttribute('src');
+    });
+  }
   function normalizeMarkdownHref(value) {
     const raw = String(value || '').trim();
     if (!raw || /[\u0000-\u001f\u007f]/.test(raw)) return null;
@@ -407,7 +422,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       },
       image({ href, title, text }) {
         const raw = String(href || '').trim();
-        const src = /^data:image\/(png|gif|jpeg|webp);base64,/i.test(raw) ? raw : normalizeMarkdownHref(raw);
+        const src = /^data:image\/(png|gif|jpeg|webp);base64,/i.test(raw) ? raw : normalizeMarkdownHref(fixImgPath(raw));
         if (!src) return escapeHtml(text || '');
         return '<img src="' + escapeHtml(src) + '" alt="' + escapeHtml(text || '') + '" loading="lazy" decoding="async"' +
           (title ? ' title="' + escapeHtml(title) + '"' : '') + '>';
@@ -986,6 +1001,7 @@ footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);fon
       renderMath();
       enhanceCodeBlocks();
       enhanceHeadings();
+      fixHtmlImages();
       setupImages();
       currentTags = getTags(meta);
       renderTags(currentTags);
